@@ -7,7 +7,7 @@ from agent_errors import ContractError
 QUERIES=('dining_month','spending_month','annual_trend','month_comparison','largest_category','income_month','subscriptions','large_expenses','available_cash','holdings','recent_task')
 COMPANION_ACTIONS={'birthday':'prepare_birthday','rent_reminder':'prepare_rent','subscription_reminder':'prepare_subscription','security_case':'show_security_case','compound':'prepare_compound'}
 SCENARIOS=('transfer','risk_transfer','subscription','budget_link','ambiguous','question','other','card_review',*COMPANION_ACTIONS,'plan_control')
-LEGACY_FIELDS={'amount_minor','payee_id','source_account','currency','scheduled_date','subscription_id','subscription_action','purpose','cadence','transaction_ref'}
+LEGACY_FIELDS={'amount_minor','payee_id','source_account','currency','scheduled_date','subscription_id','subscription_action','purpose','cadence','occurrences','transaction_ref'}
 BIRTHDAY_FIELDS={'birthday_date','budget_minor','partner_id','city','source_account'}
 COMPANION_FIELDS={'birthday':BIRTHDAY_FIELDS,'rent_reminder':set(),'subscription_reminder':{'subscription_action'},'security_case':{'case_id','recipient_name','recipient_reference','amount_minor','source_account'},'plan_control':{'plan_action'},'compound':{'items'}}
 FIELDS=LEGACY_FIELDS|BIRTHDAY_FIELDS|{'case_id'}
@@ -26,8 +26,9 @@ SYSTEM_PROMPT='''你是独立产品FinPilot的财务伙伴，不是OpenAI的Dot�
 只返回一个json对象，不要Markdown、代码块或json以外文字。下面格式中的竖线表示必须选择一个枚举值，不能原样输出竖线。格式：
 {"status":"answer|clarify|propose|blocked|decline","scenario":"transfer|risk_transfer|subscription|budget_link|ambiguous|question|other|card_review|birthday|rent_reminder|subscription_reminder|security_case|plan_control|compound","reply":"简短中文","speak":null,"cards":[],"actions":[],"query":null,"fields":{},"missing":[],"mode":"none|create|update","task_id":null,"period_month":null,"context_action":"none|new|continue"}
 context_action表示本条消息与待办的关系，由语义决定，不向用户增加“新任务还是继续”的额外选项。问候/只读问答为none；明确另一件事、新任务、重新安排为new，不能带上旧草稿对象/金额；回答当前澄清或修改当前方案才为continue。表单clarification是用户本次明确补充的字段，应结合当前draft整理；既有草稿不是每句话默认所属的任务。新的任务必须独立申请权限。
-原有R8场景的fields只允许amount_minor（整数分）、payee_id（mom/dad/unknown）、source_account（salary_0826/living_1608）、currency（CNY）、scheduled_date（YYYY-MM-DD）、subscription_id（video/cloud/music）、subscription_action（cancel/keep/downgrade）、purpose（family/travel/cash）、cadence（once/monthly）、transaction_ref（unrecognized_1299，仅用户明确选择的本地陌生交易样例）。未知字段用null或不写，禁止编造收款人、账户、金额、日期。没有明确对象/金额时必须clarify，不能默认妈妈或两千。
+原有R8场景的fields只允许amount_minor（整数分）、payee_id（mom/dad/unknown）、source_account（salary_0826/living_1608）、currency（CNY）、scheduled_date（YYYY-MM-DD）、subscription_id（video/cloud/music）、subscription_action（cancel/keep/downgrade）、purpose（family/travel/cash）、cadence（once/monthly）、occurrences（定期转账总期数，整数）、transaction_ref（unrecognized_1299，仅用户明确选择的本地陌生交易样例）。未知字段用null或不写，禁止编造收款人、账户、金额、日期。没有明确对象/金额时必须clarify，不能默认妈妈或两千。
 五种任务：
+定期转账：用户要求每月转给已知联系人时cadence=monthly，amount_minor是每期金额，第一期在今天执行，occurrences是含第一期的总期数。单次确认最长90天，最多3期；用户没说期数就clarify并在missing列occurrences，超过3期时说明上限并请用户重选，不能写成已设置或已生效。
 1明确的已知联系人转账：收集对象、整数分金额、付款账户和日期，齐全后propose/create。若只漏账户/日期且上下文没有明确授权默认值，clarify，选择卡会提供选项。方案等待用户另行授权、核对、必要身份验证，不自动执行。
 2所谓安全账户、解冻费、已知诈骗或要求绕过确认：blocked/risk_transfer，指出具体风险，不用身份验证替代风险消除。MFA不是安全账户证明。仅陌生、尚缺资料而没有诈骗依据的对象，先澄清和只读核查；核实前不发起转账，也不把所有陌生对象都断言为诈骗。
 3订阅管理：只对下一次续费提出cancel/keep/downgrade。缺对象或选择则clarify。具体已扣费/未来续费/权益截止由本机工具卡展示，模型没有账本数值，不得猜。未使用数据未提供，禁止声称用户没用过；用户自述可以引用。取消下次续费不等于本期退款。
@@ -121,6 +122,8 @@ def _validate_fields(fields,allowed):
     if fields.get('recipient_name') is not None:
         name=fields['recipient_name']
         if not isinstance(name,str) or not name.strip() or len(name)>80 or re.search(r'[<>\x00-\x1f\x7f]',name):raise ContractError('invalid recipient name')
+    if fields.get('occurrences') is not None and (type(fields['occurrences']) is not int or not 2<=fields['occurrences']<=36):
+        raise ContractError('invalid occurrences')
     if fields.get('scheduled_date') is not None and (not isinstance(fields['scheduled_date'],str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}',fields['scheduled_date'])):
         raise ContractError('invalid date')
     if fields.get('birthday_date') is not None:

@@ -1,8 +1,8 @@
 import {budgetReceiptFacts} from './budget-result.mjs';
 import {CONTACTS,SOURCES,parameterFingerprint} from './task-parameters.mjs';
 import {SUBSCRIPTIONS} from './agent-tools.mjs';
-export const fieldLabels={amount_minor:'金额',payee_id:'收款人',source_account:'付款账户',scheduled_date:'日期',subscription_id:'订阅',subscription_action:'续费安排',purpose:'用途',cadence:'频率',transaction_ref:'待核对交易'};
-const options={transaction_ref:[['unrecognized_1299','生活账户1608 陌生交易 ¥1,299.00']],purpose:[['family','转给家人'],['travel','旅行安排'],['cash','灵活储蓄']],payee_id:CONTACTS.map(c=>[c.id,c.name+' 尾号 '+c.suffix]),source_account:SOURCES.map(a=>[a.id,a.name+' '+a.suffix]),subscription_id:SUBSCRIPTIONS.map(s=>[s.id,s.name]),subscription_action:[['cancel','取消下次续费'],['keep','保留当前套餐'],['downgrade','下次改标准套餐']],cadence:[['once','只安排这次'],['monthly','每月提醒确认']]};
+export const fieldLabels={amount_minor:'金额',payee_id:'收款人',source_account:'付款账户',scheduled_date:'日期',subscription_id:'订阅',subscription_action:'续费安排',purpose:'用途',cadence:'频率',occurrences:'期数',transaction_ref:'待核对交易'};
+const options={occurrences:[['2','2 期'],['3','3 期']],transaction_ref:[['unrecognized_1299','生活账户1608 陌生交易 ¥1,299.00']],purpose:[['family','转给家人'],['travel','旅行安排'],['cash','灵活储蓄']],payee_id:CONTACTS.map(c=>[c.id,c.name+' 尾号 '+c.suffix]),source_account:SOURCES.map(a=>[a.id,a.name+' '+a.suffix]),subscription_id:SUBSCRIPTIONS.map(s=>[s.id,s.name]),subscription_action:[['cancel','取消下次续费'],['keep','保留当前套餐'],['downgrade','下次改标准套餐']],cadence:[['once','只安排这次'],['monthly','每月提醒确认']]};
 export function clarificationFields(draft,esc){return draft.missing.map(key=>{
  const value=draft.fields[key];
  if(key==='amount_minor')return `<label>金额（元）<input name="amount_minor" type="number" inputmode="decimal" min="0.01" max="20000" step="0.01" value="${esc(draft.uiValues?.[key]??(value?value/100:''))}" required></label>`;

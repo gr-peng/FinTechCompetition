@@ -147,6 +147,9 @@ export function classifyOperation(state,operation,options={}){
  if(snapshot.writes&&RED_KINDS.has(snapshot.kind)){level='red';reasons.push('sensitive_operation');}
  const cumulativeMinor=TRANSFER_KINDS.has(snapshot.kind)?transferTotal(state,snapshot,safety,options.excludeExecutionId,nowValue(state,options))+snapshot.amountMinor:null;
  if(cumulativeMinor!==null&&cumulativeMinor>safety.policy.transferThresholdMinor){level='red';reasons.push('daily_transfer_threshold');}
+ // A recurring confirmation covers every period, so its whole cap counts now.
+ let periods=1;try{periods=JSON.parse(snapshot.parameters).occurrences||1;}catch{}
+ if(cumulativeMinor!==null&&periods>1&&snapshot.amountMinor*periods>safety.policy.transferThresholdMinor){level='red';reasons.push('recurring_total_threshold');}
  if(snapshot.writes&&flags.has('voice_mismatch')){level='red';reasons.push('voice_mismatch');}
  if(snapshot.writes&&[...flags].some(flag=>flag!=='new_recipient')&&!riskBlocked){level='red';reasons.push('risk_signal');}
  if(snapshot.writes&&snapshot.amountMinor>0&&snapshot.currency!=='CNY'){level='red';reasons.push('currency_requires_review');}

@@ -1,6 +1,7 @@
 import {budgetPreview,budgetReceiptFacts} from './budget-result.mjs';
 import {taskParameters,parameterFingerprint,CONTACTS,SOURCES} from './task-parameters.mjs';
 import {SUBSCRIPTIONS} from './agent-tools.mjs';
+import {lastPeriodDate} from './standing-orders.mjs';
 const actionNames={cancel:'取消下次续费',keep:'保留当前套餐',downgrade:'下次改标准套餐'};
 export function salaryPlanRows(t,original){
  const person=CONTACTS.find(c=>c.id===taskParameters(t).payee_id);
@@ -11,7 +12,7 @@ export function salaryPlanRows(t,original){
 }
 export function taskPermission(t){
  if(t.kind==='subscription'){const sub=SUBSCRIPTIONS.find(s=>s.id===(t.subscriptionId||'video'));return '查看'+(sub?.name||'本项订阅')+'并'+(actionNames[t.subscriptionAction||'cancel'])+'，仅限下次续费';}
- if(t.kind==='transfer'){const p=taskParameters(t),source=SOURCES.find(s=>s.id===p.source_account);return '读取'+source.name+' '+source.suffix+'并准备向'+t.target+'的这一次转账';}
+ if(t.kind==='transfer'){const p=taskParameters(t),source=SOURCES.find(s=>s.id===p.source_account);return '读取'+source.name+' '+source.suffix+'并准备向'+t.target+(p.cadence==='monthly'?'的'+p.occurrences+'期定期转账':'的这一次转账');}
  if(t.kind==='planning')return '读取并修改本月旅行预算，保留必要支出预留';
  return null;
 }
@@ -25,7 +26,7 @@ export function taskReviewHTML(t,{state,esc}){
  const row=(label,value)=>`<div class="plan-row ${label==='金额'?'operation-amount-row':''}"><span>${label}</span><strong>${esc(value)}</strong></div>`;
  let html='';
  if(t.kind==='card')html+=row('核对交易','陌生商户 ¥1,299.00')+row('卡片账户','生活账户 1608')+row('安排','临时锁卡并提交核查，不转出资金');
- if(['transfer','investment','redemption'].includes(t.kind))html+=row(t.kind==='transfer'?'收款人':'安排对象',t.target)+row('付款账户',SOURCES.find(a=>a.id===p.source_account)?.name+' '+SOURCES.find(a=>a.id===p.source_account)?.suffix)+row('币种',p.currency)+row('金额',cash(p.amount_minor))+row('日期',p.scheduled_date);
+ if(['transfer','investment','redemption'].includes(t.kind))html+=row(t.kind==='transfer'?'收款人':'安排对象',t.target)+row('付款账户',SOURCES.find(a=>a.id===p.source_account)?.name+' '+SOURCES.find(a=>a.id===p.source_account)?.suffix)+row('币种',p.currency)+row(p.cadence==='monthly'?'每期金额':'金额',cash(p.amount_minor))+(p.cadence==='monthly'?row('频率','每月一次')+row('期数',p.occurrences+' 期（今天执行第 1 期）')+row('累计上限',cash(p.amount_minor*p.occurrences))+row('最后一期',lastPeriodDate(p.scheduled_date,p.occurrences)):row('日期',p.scheduled_date));
  if(t.kind==='subscription'){
   const sub=SUBSCRIPTIONS.find(x=>x.id===p.subscription_id);
   html+=row('订阅对象',sub?.name||'待核对')+row('安排',actionNames[p.subscription_action])+row('生效范围','下次续费')+row('下次续费日',sub?.nextDate||'待核对')+row('本期权益保留至',sub?.rightsUntil||'待核对')+row('本期已扣费用',cash(sub?.currentMinor||0));

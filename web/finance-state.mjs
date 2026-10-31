@@ -26,7 +26,7 @@ const canonical=value=>JSON.stringify(stable(value));
 // here creates finance -> task-parameters -> agent-tools -> finance during startup.
 // Exact key/string matching fails closed when that contract gains a new field.
 function operationParameters(t){return {
- amount_minor:Math.round((t.amount||0)*100),cadence:t.cadence||'once',currency:t.currency||'CNY',kind:t.kind,
+ amount_minor:Math.round((t.amount||0)*100),cadence:t.cadence||'once',occurrences:t.occurrences||1,currency:t.currency||'CNY',kind:t.kind,
  payee_id:t.payeeId||((t.key==='salary')?'mom':null),purpose:t.purpose||null,scheduled_date:t.scheduledDate||STORY_DATE,
  scope:t.scope||'next_renewal',source_account:t.sourceAccount||'salary_0826',subscription_action:t.subscriptionAction||'cancel',
  subscription_id:t.subscriptionId||'video',next_renewal:t.nextRenewalDate||null,subscription_revision:t.subscriptionRevision||1,

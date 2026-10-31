@@ -22,7 +22,7 @@ export function missingFields(result){
  if(result.scenario==='card_review')return f.transaction_ref?[]:['transaction_ref'];
  if(result.scenario==='subscription')return ['subscription_id','subscription_action'].filter(k=>!f[k]);
  const purpose=f.purpose;
- if(result.scenario==='transfer'||purpose==='family')return ['amount_minor','payee_id','source_account','scheduled_date'].filter(k=>!f[k]);
+ if(result.scenario==='transfer'||purpose==='family')return ['amount_minor','payee_id','source_account','scheduled_date',...(f.cadence==='monthly'?['occurrences']:[])].filter(k=>!f[k]);
  if(result.scenario==='budget_link'||purpose==='travel'||purpose==='cash')return ['amount_minor'].filter(k=>!f[k]);
  return ['purpose','amount_minor'].filter(k=>!f[k]);
 }
@@ -71,7 +71,7 @@ function applyResult(state,result,facts,{originTurnId,userText='',agentRunId=nul
  }else task=createTask(state,key,{reuse:false,originTurnId});
  const patch={};
  if(fields.amount_minor!=null)patch.amount=fields.amount_minor/100;
- for(const [field,key] of Object.entries({payee_id:'payeeId',source_account:'sourceAccount',currency:'currency',scheduled_date:'scheduledDate',subscription_id:'subscriptionId',subscription_action:'subscriptionAction',purpose:'purpose',cadence:'cadence',transaction_ref:'transactionRef'}))if(fields[field]!=null)patch[key]=fields[field];
+ for(const [field,key] of Object.entries({payee_id:'payeeId',source_account:'sourceAccount',currency:'currency',scheduled_date:'scheduledDate',subscription_id:'subscriptionId',subscription_action:'subscriptionAction',purpose:'purpose',cadence:'cadence',occurrences:'occurrences',transaction_ref:'transactionRef'}))if(fields[field]!=null)patch[key]=fields[field];
  if(key==='safety'){patch.amount=0;patch.sourceAccount='living_1608';patch.transactionRef=fields.transaction_ref;}
  if(key==='transfer'){
   const payee=CONTACTS.find(c=>c.id===fields.payee_id);if(!payee)throw Error('收款人尚未核实');
