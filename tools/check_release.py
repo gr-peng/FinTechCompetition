@@ -38,6 +38,10 @@ def main():
             if len(content) > 10 * 1024 * 1024 or content[:4] != b'RIFF' or content[8:12] != b'WAVE':
                 risks.append({'path':name,'risk':'unexpected-audio-format'})
             continue
+        if path.suffix.lower() == '.mp4':
+            if len(content) > 30 * 1024 * 1024 or content[4:8] != b'ftyp':
+                risks.append({'path':name,'risk':'unexpected-video-format'})
+            continue
         if path.suffix.lower() in {'.pdf','.png','.jpg','.jpeg','.ico','.woff','.woff2'}:
             continue
         try:
