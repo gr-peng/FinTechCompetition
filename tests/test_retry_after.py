@@ -26,7 +26,7 @@ class RetryAfterTests(unittest.TestCase):
             response.getheader.return_value='180'
             conn.getresponse.return_value=response
             with self.assertRaises(ProviderError) as caught:
-                agent_provider.run_provider(PAYLOAD,'test-only','deepseek-v4-flash-0731','test',lambda *a,**k:conn)
+                agent_provider.run_provider(PAYLOAD,'test-only','deepseek-flash','test',lambda *a,**k:conn)
             error=caught.exception
             self.assertEqual(error.status,status);self.assertEqual(error.code,code)
             self.assertEqual(error.retry_after_seconds,180)
@@ -40,7 +40,7 @@ class RetryAfterTests(unittest.TestCase):
             failure.retry_after_seconds=180
             failure.diagnostic={'error':'rate_limited','upstream_status':429,'upstream_retry_after_seconds':180,'completed':False}
             provider=Mock(side_effect=failure);answers=[]
-            host={'AGENT_VALIDATION':True,'ALLOW_API':True,'agent_contract':types.SimpleNamespace(request_messages=lambda d:None,ContractError=ValueError),'agent_provider':types.SimpleNamespace(run_provider=provider,ProviderError=ProviderError),'LOCK':threading.Lock(),'AGENT_CODE_LOCK':threading.Lock(),'BUDGET':{'requests':0},'BUDGET_FILE':Path(temp)/'budget.json','MODEL':'deepseek-v4-flash-0731','UPSTREAM_UA':'test','http':types.SimpleNamespace(client=types.SimpleNamespace(HTTPSConnection=None))}
+            host={'AGENT_VALIDATION':True,'ALLOW_API':True,'agent_contract':types.SimpleNamespace(request_messages=lambda d:None,ContractError=ValueError),'agent_provider':types.SimpleNamespace(run_provider=provider,ProviderError=ProviderError),'LOCK':threading.Lock(),'AGENT_CODE_LOCK':threading.Lock(),'BUDGET':{'requests':0},'BUDGET_FILE':Path(temp)/'budget.json','MODEL':'deepseek-flash','UPSTREAM_UA':'test','http':types.SimpleNamespace(client=types.SimpleNamespace(HTTPSConnection=None))}
             class Handler:
                 def payload(self,n):return PAYLOAD
                 def reply(self,data,status=200):answers.append((data,status))

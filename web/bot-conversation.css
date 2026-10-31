@@ -40,3 +40,8 @@ html[data-bot-speaking=true] .bot-topbar .companion img{animation:bot-speaking-b
 @media(prefers-reduced-motion:reduce){html[data-bot-speaking=true] .bot-topbar .companion img,.action-success,.action-success svg,.action-success path{animation:none!important}.feedback-arrow{display:none}}
 html[data-motion=reduce] .bot-topbar .companion img,html[data-motion=reduce] .action-success,html[data-motion=reduce] .action-success svg,html[data-motion=reduce] .action-success path{animation:none!important}
 html[data-motion=reduce] .feedback-arrow{display:none}
+
+.bot-topbar .bot-reset{width:44px;height:44px;margin-left:8px;flex:0 0 44px}.bot-reset svg{width:22px;height:22px}.bot-topbar .task-link{margin-left:auto}.companion-source+.bubble{margin-top:12px}.companion-source .companion-risk{white-space:nowrap}
+#app[data-route=assistant] .bot-topbar .bot-avatar{grid-row:1}
+#app[data-route=assistant] .bot-topbar .task-link{grid-column:1;grid-row:1;justify-self:start;margin:0}
+#app[data-route=assistant] .bot-topbar .bot-reset{grid-column:3;grid-row:1;justify-self:end;margin:0}

@@ -17,7 +17,7 @@ PAYLOAD={'validation_scope':'finpilot-fifteen-v1','text':'下周林夏生日，�
 
 
 def proposal(scenario='birthday',fields=None,**patch):
-    default={'birthday':BIRTHDAY,'rent_reminder':{},'subscription_reminder':{'subscription_action':'keep'},'security_case':{'case_id':'reported_scam'},'compound':{'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-09','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}}
+    default={'savings_coach':{},'birthday':BIRTHDAY,'rent_reminder':{},'subscription_reminder':{'subscription_action':'keep'},'security_case':{'case_id':'reported_scam'},'compound':{'items':[{'id':'item-1','kind':'sms','contact_id':'mom','message':'周末回家吃饭。'},{'id':'item-2','kind':'cake','product_id':'demo-cake-01','date':'2026-11-09','pickup_time':'16:00','fulfillment':'pickup','source_account':'living_1608'}]}}
     result={'status':'propose','scenario':scenario,'reply':'我先整理安排，等你核对后再继续。','fields':copy.deepcopy(default[scenario] if fields is None else fields),'missing':[],
             'actions':[{'type':COMPANION_ACTIONS[scenario]}],'cards':[]}
     result.update(patch)
@@ -47,7 +47,7 @@ class Response:
 class CompanionContractTests(unittest.TestCase):
     def provider(self,result):
         conn=Mock()
-        conn.getresponse.return_value=Response(json.dumps({'model':'deepseek-v4-flash-0731','choices':[{'finish_reason':'stop','message':{'content':json.dumps(result,ensure_ascii=False)}}]}).encode())
+        conn.getresponse.return_value=Response(json.dumps({'model':'deepseek-flash','choices':[{'finish_reason':'stop','message':{'content':json.dumps(result,ensure_ascii=False)}}]}).encode())
         return conn,lambda *args,**kwargs:conn
 
     def test_legacy_r8_results_preserve_metadata_and_default_new_envelope_fields(self):
@@ -235,7 +235,7 @@ class CompanionContractTests(unittest.TestCase):
     def test_provider_transports_control_proposal_without_executing_or_granting(self):
         conn,factory=self.provider(control('pause'))
         context={'scenario':'birthday','fields':BIRTHDAY,'missing':[],'plan_id':'birthday-local-1','revision':1,'status':'scheduled'}
-        result,diagnostic=run_provider({**PAYLOAD,'text':'先暂停生日计划','run_companion':context},KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        result,diagnostic=run_provider({**PAYLOAD,'text':'先暂停生日计划','run_companion':context},KEY,'deepseek-flash','unit-test',factory)
         self.assertTrue(diagnostic['completed']);self.assertEqual(result['fields'],{'plan_action':'pause'})
         self.assertNotIn('grant',result);self.assertNotIn('verified',result)
         conn.request.assert_called_once();conn.close.assert_called_once()
@@ -255,7 +255,7 @@ class CompanionContractTests(unittest.TestCase):
         for name,value in extras.items():
             companion={'scenario':'birthday','fields':{},'missing':[],name:value}
             factory=Mock()
-            with self.subTest(extra=name),self.assertRaises(ContractError):run_provider({**PAYLOAD,'run_companion':companion},KEY,'deepseek-v4-flash-0731','unit-test',factory)
+            with self.subTest(extra=name),self.assertRaises(ContractError):run_provider({**PAYLOAD,'run_companion':companion},KEY,'deepseek-flash','unit-test',factory)
             factory.assert_not_called()
         for fields in [{'amount_minor':52000},{'api_key':KEY},{'city':{'ledger':[]}},{'source_account':'salary_0826'}]:
             with self.subTest(fields=fields),self.assertRaises(ContractError):request_messages({**PAYLOAD,'run_companion':{'scenario':'birthday','fields':fields,'missing':[]}})
@@ -288,7 +288,7 @@ class CompanionContractTests(unittest.TestCase):
                             ('hi',{'status':'answer','scenario':'other','reply':'你好，今天想聊点什么？','speak':'你好，今天想聊点什么？','fields':{},'missing':[],'mode':'none','task_id':None})]:
             conn,factory=self.provider(result)
             data={**PAYLOAD,'text':text,'run_companion':{'scenario':'birthday','fields':{},'missing':['birthday_date'],'revision':1,'status':'awaiting_details'}}
-            value,diagnostic=run_provider(data,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+            value,diagnostic=run_provider(data,KEY,'deepseek-flash','unit-test',factory)
             self.assertEqual(value['reply'],result['reply']);self.assertEqual(value['speak'],result['speak']);self.assertTrue(diagnostic['completed'])
             conn.request.assert_called_once();self.assertEqual(conn.request.call_args.args[:2],('POST','/v1/chat/completions'))
             body=json.loads(conn.request.call_args.args[2]);self.assertIn(text,body['messages'][-1]['content']);self.assertIn('run_companion',body['messages'][-1]['content'])
@@ -298,7 +298,7 @@ class CompanionContractTests(unittest.TestCase):
     def test_malformed_model_action_stops_with_sanitized_contract_error_and_no_fallback(self):
         value=proposal();value['actions'][0]['verified']=True
         conn,factory=self.provider(value)
-        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
         self.assertEqual(raised.exception.code,'invalid_contract');self.assertEqual(raised.exception.diagnostic['schema_error'],'invalid actions')
         self.assertNotIn(KEY,json.dumps(raised.exception.diagnostic));conn.request.assert_called_once()
 

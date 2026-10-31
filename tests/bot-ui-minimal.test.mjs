@@ -220,7 +220,7 @@ test('each model-selected security variant uses actual program evidence without 
    const balance=h.state.balance,rows=h.state.ledger.length;
    const sourceTypes={prompt_injection_email:['injection_email','external-mail-v1'],prompt_injection_page:['injection_page','external-page-v1'],prompt_injection_tool:['injection_order','external-order-v1'],safe_external_content:['safe_external_content','external-safe-v1']};
    const pair=sourceTypes[caseId];if(pair)h.state.companion.pendingEvent={type:pair[0],fixture_id:pair[1]};
-   const fields={case_id:caseId,...(caseId==='reported_scam'?{recipient_name:'二手卖家',amount_minor:200000}:{})};
+   const fields={case_id:caseId,...(caseId==='reported_scam'?{recipient_name:'闲鱼卖家',recipient_card_number:'0000000000008891',amount_minor:200000}:{})};
    const output=h.controller.applyModelResult(model('security_case','propose',{fields,cards:[{type:'security_notice'}],actions:[{type:'show_security_case'}]}),{programEvent:!!pair});
    assert.equal(output.text,'这是一条来自本次受控模型响应的自然回复。');
    assert.equal(h.state.balance,balance);assert.equal(h.state.ledger.length,rows);
@@ -233,6 +233,7 @@ test('each model-selected security variant uses actual program evidence without 
     assert.equal(h.state.companion.securityNotice.level,'red');assert.match(h.state.companion.securityNotice.detail,/合成收款记录有 7 条举报/);
     assert.equal(h.state.safety.locked,true);assert.equal(h.state.companion.recipient.review.evidence.report_count,7);
 
+   }else if(caseId==='prompt_injection_tool'){assert.equal(h.state.safety.locked,false);assert.equal(h.state.companion.securityNotice,null);
    }else if(caseId.startsWith('prompt_injection_')){
     assert.ok(h.state.safety.audit.some(e=>e.type==='blocked'&&e.reason==='untrusted_authority'));
     assert.ok(h.state.safety.signals.some(e=>e.kind==='prompt_injection'));
@@ -270,7 +271,7 @@ test('a matched unfamiliar recipient still requires a bound yellow demo password
  await withController(async h=>withFormData(async()=>{
   const balance=h.state.balance,rows=h.state.ledger.length;
   h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'unfamiliar_recipient'},actions:[{type:'show_security_case'}]}));
-  await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference:'new-card-6217',recipientName:'陈宇',purpose:'相机维修',amount:'300',sourceAccount:'living_1608'}}});
+  await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference:'new-card-6217',cardNumber:'0000000000006217',recipientName:'陈宇',purpose:'相机维修',amount:'300',sourceAccount:'living_1608'}}});
   const id=h.state.companion.recipient.id;
   assert.equal(h.state.companion.recipient.review.status,'matched');
   await h.controller.handleAction('recipient-confirm',{}, {isTrusted:true});
@@ -291,7 +292,7 @@ test('unknown and reported recipient reviews remain distinct and neither can cre
   await t.test(status,async()=>withController(async h=>withFormData(async()=>{
    const balance=h.state.balance,rows=h.state.ledger.length;
    h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'unfamiliar_recipient'},actions:[{type:'show_security_case'}]}));
-   await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference,recipientName,purpose,amount:'300',sourceAccount:'living_1608'}}});
+   await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference,cardNumber:status==='reported'?'0000000000008891':'0000000000001234',recipientName,purpose,amount:'300',sourceAccount:'living_1608'}}});
    assert.equal(h.state.companion.recipient.review.status,status);
    assert.doesNotMatch(h.controller.render(),/data-action="recipient-confirm"/);
    await assert.rejects(h.controller.handleAction('recipient-confirm',{}, {isTrusted:true}),error=>error.code==='risk_blocked');
@@ -305,7 +306,7 @@ test('cancelling after verified recipient dispatch invalidates its awaited resul
  await withController(async h=>withFormData(async()=>{
   const balance=h.state.balance,rows=h.state.ledger.length;
   h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'unfamiliar_recipient'},actions:[{type:'show_security_case'}]}));
-  await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference:'new-card-6217',recipientName:'陈宇',purpose:'相机维修',amount:'300',sourceAccount:'living_1608'}}});
+  await h.controller.handleSubmit({target:{id:'companion-recipient-form',fields:{reference:'new-card-6217',cardNumber:'0000000000006217',recipientName:'陈宇',purpose:'相机维修',amount:'300',sourceAccount:'living_1608'}}});
   await h.controller.handleAction('recipient-confirm',{}, {isTrusted:true});
   const challenge=Object.values(h.state.safety.challenges).find(c=>c.status==='pending');assert.ok(challenge);
   const running=h.controller.handleSubmit({target:{id:'safety-challenge-form',dataset:{challenge:challenge.id},fields:{challengeCode:DEMO_VERIFICATION_CODE}}});
@@ -448,7 +449,7 @@ test('external attacks require an actual bound source, while a model label canno
 test('natural transfer resolves a trusted contact without a purpose and cancellation requires fresh confirmation',async()=>{
  await withController(async h=>withFormData(async()=>{
   const before=h.state.balance;
-  h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'unfamiliar_recipient',recipient_name:'陈宇',amount_minor:30000},actions:[{type:'show_security_case'}]}));
+  h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'unfamiliar_recipient',recipient_name:'陈宇',recipient_card_number:'0000000000006217',amount_minor:30000},actions:[{type:'show_security_case'}]}));
   assert.equal(h.state.companion.recipient.status,'review');assert.equal(h.state.companion.recipient.input.purpose,'转账');
   await h.controller.handleAction('recipient-confirm',{}, {isTrusted:true});
   const c=Object.values(h.state.safety.challenges).find(x=>x.status==='pending');
@@ -464,7 +465,7 @@ test('natural transfer resolves a trusted contact without a purpose and cancella
 
 test('a model risk label without matching trusted evidence cannot invent reports or a lock',async()=>{
  await withController(async h=>{
-  h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'reported_scam',recipient_name:'陈宇',amount_minor:30000},actions:[{type:'show_security_case'}]}));
+  h.controller.applyModelResult(model('security_case','propose',{fields:{case_id:'reported_scam',recipient_name:'陈宇',recipient_card_number:'0000000000006217',amount_minor:30000},actions:[{type:'show_security_case'}]}));
   assert.equal(h.state.safety.locked,false);assert.equal(h.state.companion.recipient.review.evidence.report_count,0);
   assert.equal(h.state.companion.recipient.review.status,'matched');
  });
@@ -499,8 +500,8 @@ test('external review verifies first, warns again, then cancels without sending 
 
 test('external source review counts actual wrong passwords and never creates payment authority',async()=>{
  await withController(async h=>withFormData(async()=>{
-  h.state.companion.pendingEvent={type:'injection_order',fixture_id:'external-order-v1'};
-  h.controller.inspectExternalSource('injection_order');
+  h.state.companion.pendingEvent={type:'injection_email',fixture_id:'external-mail-v1'};
+  h.controller.inspectExternalSource('injection_email');
   await h.controller.handleAction('source-review-verify',{},{});
   const c=Object.values(h.state.safety.challenges).find(c=>c.status==='pending');
   for(let i=1;i<=3;i++){

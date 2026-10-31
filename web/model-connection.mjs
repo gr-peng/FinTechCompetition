@@ -3,7 +3,7 @@ export const CHAT_PROVIDER='minimax-official';
 export const CHAT_BASE='https://api.minimax.cn/v1';
 export const CHAT_PROFILES=Object.freeze([
  Object.freeze({id:CHAT_PROVIDER,label:'MiniMax 官方',model:'MiniMax-M3.1-Flash',base_url:CHAT_BASE}),
- Object.freeze({id:'micu',label:'Micu',model:'deepseek-v4-flash-0731',base_url:'https://www.micuapi.ai/v1'})
+ Object.freeze({id:'micu',label:'Micu',model:'deepseek-flash',base_url:'https://www.micuapi.ai/v1'})
 ]);
 const profile=id=>CHAT_PROFILES.find(p=>p.id===id);
 export function normalizeModelName(value){

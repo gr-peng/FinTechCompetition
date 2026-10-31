@@ -56,3 +56,7 @@ body[data-fp-material-opaque=true] .bank-card-face{background:var(--bank-card-su
 .bank-wallet-stack{height:calc(224px + (var(--card-count,3) - 1)*56px);transition:height 280ms ease-out}.bank-card-actions{flex-wrap:wrap}.bank-card-actions button{min-width:90px}.bank-product h3{font-size:14px;margin:0}.bank-product p{font-size:14px;margin:0}.bank-product label{display:grid;gap:8px;font-size:14px}.bank-product input{width:100%;min-height:44px;border:.5px solid var(--slateA5);border-radius:12px;padding:10px;font:inherit;background:var(--whiteA7)}.card-product-result{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--indigo11);margin:0}.card-product-result svg{width:20px;height:20px}.bank-card-apply{min-height:44px}
 @media(max-width:340px){.bank-wallet-stack{height:calc(208px + (var(--card-count,3) - 1)*56px)}}
 @media(prefers-reduced-motion:reduce){.bank-wallet-stack{transition:none}}
+.bank-product-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bank-product-types button{min-height:44px;border:.5px solid var(--slateA5);border-radius:14px;font:inherit;font-size:14px}
+.bank-product-types button[aria-pressed=true]{background:var(--indigo3);border-color:var(--indigo7);color:var(--indigo11)}
+.bank-product{scroll-margin-block:20px}

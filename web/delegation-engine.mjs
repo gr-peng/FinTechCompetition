@@ -258,7 +258,7 @@ export function runLocalDemoAdapter(operation,{outcome='completed',now=DEFAULT_D
 
 // Bridge for the delivered proactive-demo module. This is the integration entry;
 // the generic DAG exports above need not be instantiated by the main UI.
-const proactiveKinds={search_restaurant:'read',resolve_contact:'read',reserve_restaurant:'booking',message_contact:'message',send_sms:'message',pay_deposit:'deposit',schedule_local_task:'schedule',transfer:'transfer',renew_subscription:'subscription',cancel_subscription:'subscription',cancel_booking:'booking_cancel'};
+const proactiveKinds={search_restaurant:'read',resolve_contact:'read',reserve_restaurant:'booking',reserve_ride:'booking',message_contact:'message',send_sms:'message',pay_deposit:'deposit',schedule_local_task:'schedule',transfer:'transfer',renew_subscription:'subscription',cancel_subscription:'subscription',cancel_booking:'booking_cancel'};
 export function proactiveSafetyOperation(context){
  if(context?.mode!=='local_demo'||!context.step||!Object.hasOwn(proactiveKinds,context.step.operation))fail('invalid_operation','未核实的主动计划操作');
  const node=context.step,payload=safeData(node.payload||{}),kind=proactiveKinds[node.operation];

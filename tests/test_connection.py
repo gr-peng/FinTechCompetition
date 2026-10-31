@@ -177,7 +177,7 @@ class ConnectionTests(unittest.TestCase):
         sess=next(iter(app.SESSIONS.values()))
         voice={'fixture':'voice-state'}
         sess.update(key='synthetic-legacy-key',minimax_key='synthetic-voice-key',voice_fixture=voice)
-        app.MODEL='deepseek-v4-flash-0731';app.BASE='https://www.micuapi.ai/v1'
+        app.MODEL='deepseek-flash';app.BASE='https://www.micuapi.ai/v1'
         sessions=app.SESSIONS
         with patch.object(app.chat_profile,'live_official_only',False):
             self.assertTrue(app.chat_profile.install_existing_service(app))

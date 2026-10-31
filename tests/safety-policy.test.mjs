@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
  DEMO_VERIFICATION_CODE,SAFETY_DEFAULTS,SafetyError,ensureSafety,classifyOperation,authorizeSafety,
  beginChallenge,verifyChallenge,validateGrant,getSafetyGrant,acquireExecution,validatePermit,commitExecution,
- failExecution,recordSafetySignal,lockSafety,invalidateSafetyEpoch,revokeOperation,getSafetyChallenge,beginRecovery,recoverSafety,auditSafety,
+ failExecution,recordSafetySignal,lockSafety,invalidateSafetyEpoch,revokeOperation,getSafetyChallenge,beginRecovery,recoverSafety,auditSafety,refreshTimedFreeze,PASSWORD_FREEZE_MS,
 } from '../web/safety-policy.mjs';
 
 const NOW=Date.parse('2026-11-02T09:00:00+08:00');
@@ -60,7 +60,8 @@ test('third actual yellow password failure invalidates already in-flight writes 
  for(let i=1;i<=3;i++)verifyChallenge(s,{challengeId:challenge.id,code:'000000',source:USER,now:NOW+i});
  assert.equal(s.safety.executions[ticket.executionId].status,'interrupted');
  assert.throws(()=>commitExecution(s,ticket,{status:'completed',receipt:'late-receipt'},{now:NOW+4}),errorCode('epoch_changed'));
- const recovery=beginRecovery(s,{source:USER,now:NOW+5}),result=recoverSafety(s,{challengeId:recovery.id,source:USER,code:DEMO_VERIFICATION_CODE,now:NOW+6});
+ assert.throws(()=>beginRecovery(s,{source:USER,now:NOW+5}),errorCode('timed_freeze'));
+ const result=refreshTimedFreeze(s,{now:s.safety.lock.expiresAt});
  assert.equal(result.automaticReplay,false);assert.equal(result.requiresReauthorization,true);
  assert.throws(()=>validateGrant(s,old,{grantId:oldGrant.id,now:NOW+7}),errorCode('epoch_changed'));
  assert.equal(s.ledger.length,0);
@@ -207,13 +208,15 @@ test('three failed identity attempts lock all writes and invalidate the challeng
  for(const kind of ['transfer','paper_buy','booking','send_message'])assert.throws(()=>consent(s,operation({id:kind,kind}),{now:NOW+5}),errorCode('locked'));
 });
 
-test('password failures and explicit suspicious signals trigger real lock state, not a cooldown',()=>{
+test('password failures freeze writes for ten minutes while suspicious signals remain independently locked',()=>{
  const s=state();
  for(let i=0;i<3;i++)recordSafetySignal(s,{kind:'password_failure'},{now:NOW+i});
  assert.equal(s.safety.locked,true);assert.equal(s.safety.lock.reason,'password_failures');
- assert.equal(classifyOperation(s,operation(),{now:NOW+86400000}).blocked,true);
+ assert.equal(s.safety.lock.expiresAt,NOW+2+PASSWORD_FREEZE_MS);
+ assert.equal(classifyOperation(s,operation(),{now:NOW+600001}).blocked,true);
+ assert.equal(classifyOperation(s,operation(),{now:NOW+600002}).blocked,false);
  const other=state();recordSafetySignal(other,{kind:'prompt_injection',severity:'critical',source:{kind:'report'}},{now:NOW});
- assert.equal(other.safety.locked,true);
+ assert.equal(other.safety.locked,true);assert.equal(refreshTimedFreeze(other,{now:NOW+86400000}).released,false);assert.equal(other.safety.locked,true);
 });
 
 test('one-shot execution permits support non-consuming validation and completed read-only replay',()=>{

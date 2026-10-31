@@ -7,6 +7,10 @@ import agent_provider
 
 HOST={'ALLOW_API':True,'AGENT_VALIDATION':True}
 class ProviderSwitchTests(unittest.TestCase):
+    def test_micu_default_does_not_overwrite_session_choice_or_official_model(self):
+        self.assertEqual(p.selected({'active_chat_provider':'micu'})['model'],'deepseek-flash')
+        self.assertEqual(p.selected({'active_chat_provider':'micu','chat_models':{'micu':'my-chosen-model'}})['model'],'my-chosen-model')
+        self.assertEqual(p.selected({})['model'],'MiniMax-M3.1-Flash')
     def session(self):
         return {'key':'synthetic-official-key','chat_provider':p.PROVIDER,'minimax_key':'synthetic-voice-key'}
     def save_micu(self,s):

@@ -6,7 +6,7 @@ import {classifyOperation,authorizeSafety,beginChallenge,verifyChallenge,acquire
 const NOW=Date.parse('2026-11-02T09:00:00+08:00');
 const USER={kind:'user',method:'click'};
 const state=()=>({paused:false,ledger:[]});
-const input=(extra={})=>({reference:'new-card-6217',recipientName:'陈宇',purpose:'相机维修',amountMinor:50000,sourceAccount:'living_1608',...extra});
+const input=(extra={})=>({reference:'new-card-6217',cardNumber:'0000000000006217',recipientName:'陈宇',purpose:'相机维修',amountMinor:50000,sourceAccount:'living_1608',...extra});
 const operation=(review=reviewRecipient(input()),extra={})=>recipientOperation(review,{id:'recipient-check-1',revision:1,...extra});
 
 test('a new recipient with matching trusted details becomes a yellow proposal, not a grant',()=>{
@@ -22,13 +22,16 @@ test('a new recipient with matching trusted details becomes a yellow proposal, n
  assert.equal(acquireExecution(s,op,{grantId:grant.id,executionId:'recipient-after-proof',now:NOW+2}).replay,false);
 });
 
-test('trusted contact resolves natural name or reference without a purpose password but never invents money',()=>{
+test('a name or old reference never substitutes for a complete card number',()=>{
  const natural=reviewRecipient({recipientName:'陈宇',amountMinor:30000});
- assert.equal(natural.status,'matched');assert.equal(natural.reference,'new-card-6217');assert.equal(natural.purpose,'转账');assert.equal(natural.sourceAccount,'living_1608');
+ assert.equal(natural.status,'needs_details');assert.equal(natural.reference,null);assert.equal(natural.purpose,'转账');assert.deepEqual(natural.missing,['cardNumber','sourceAccount']);
  assert.equal(validateRecipientReview(natural,{recipientName:'陈宇',amountMinor:30000}),true);
+ assert.equal(reviewRecipient(input({cardNumber:null})).status,'needs_details');
+ const complete=reviewRecipient({cardNumber:'0000000000006217',recipientName:'陈宇',amountMinor:30000});
+ assert.equal(complete.status,'matched');assert.equal(complete.reference,'new-card-6217');assert.equal(complete.sourceAccount,'living_1608');
  for(const field of ['recipientName','purpose','sourceAccount'])assert.equal(reviewRecipient(input({[field]:null})).status,'matched');
  const missing=reviewRecipient(input({amountMinor:null}));assert.deepEqual(missing.missing,['amountMinor']);assert.throws(()=>operation(missing),e=>e.code==='recipient_details_required');
- const empty=reviewRecipient({});assert.deepEqual(empty.missing,['reference','recipientName','amountMinor','sourceAccount']);
+ const empty=reviewRecipient({});assert.deepEqual(empty.missing,['cardNumber','recipientName','amountMinor','sourceAccount']);
 });
 
 test('unknown references and detail mismatches are unverified, not an accusation of fraud',()=>{
@@ -41,7 +44,7 @@ test('unknown references and detail mismatches are unverified, not an accusation
 });
 
 test('reports come only from the named synthetic fixture and cannot be cleared by claimed details',()=>{
- const review=reviewRecipient(input({reference:'reported-card-8891'})),op=operation(review),s=state();
+ const review=reviewRecipient(input({reference:'reported-card-8891',cardNumber:'0000000000008891'})),op=operation(review),s=state();
  assert.equal(review.status,'reported');assert.equal(review.evidence.fixture_id,'recipient-fixture-8891');assert.equal(review.evidence.report_count,7);
  assert.equal(classifyOperation(s,op,{now:NOW}).riskBlocked,true);
  assert.throws(()=>authorizeSafety(s,op,{source:USER,now:NOW}),e=>e.code==='risk_blocked');
@@ -51,7 +54,7 @@ test('reports come only from the named synthetic fixture and cannot be cleared b
 test('every changed field invalidates the stored review and former authorization binding',()=>{
  const values=input(),review=reviewRecipient(values),s=state(),op=operation(review);
  const grant=authorizeSafety(s,op,{source:USER,now:NOW});
- for(const change of [{reference:'other-card'},{recipientName:'其他人'},{purpose:'买电脑'},{amountMinor:50001},{sourceAccount:'salary_0826'}]){
+ for(const change of [{reference:'other-card'},{cardNumber:'0000000000006218'},{recipientName:'其他人'},{purpose:'买电脑'},{amountMinor:50001},{sourceAccount:'salary_0826'}]){
   const next={...values,...change};assert.equal(validateRecipientReview(review,next),false);
   const nextOp=operation(reviewRecipient(next));
   assert.throws(()=>validateGrant(s,nextOp,{grantId:grant.id,now:NOW+1}),e=>e.code==='stale_binding');

@@ -1,6 +1,7 @@
 // Local demonstration policy. No identity provider, bank, network, or credential store.
 // All callers must apply effects on a clone, commit its permit, then persist that clone.
 export const DEMO_VERIFICATION_CODE='123456';
+export const PASSWORD_FREEZE_MS=10*60*1000;
 export const SAFETY_DEFAULTS=Object.freeze({failureThreshold:3,transferThresholdMinor:100000,grantTTL:300000,challengeTTL:90000,maxGrantTTL:31*86400000});
 
 const READ_KINDS=new Set(['read','query','lookup','readonly','read_only','research','inspect','remind','reminder']);
@@ -15,7 +16,7 @@ const SECRET_FIELD=/(?:password|api[_-]?key|authorization|credentials?|verificat
 const MESSAGES={locked:'安全锁定中，请先完成恢复验证。',invalid_operation:'操作参数无效，请重新整理安排。',untrusted_authority:'第三方内容和模型建议不能授予操作权限。',voice_confirmation_required:'语音确认没有绑定当前对象和参数，请重新核对。',risk_blocked:'收款对象或指令存在未消除的风险，不能通过密码验证放行。',authorization_required:'请先明确确认这项安排。',verification_required:'请先输入演示密码核对这项操作。',stale_binding:'操作参数已变化，请重新授权。',expired_grant:'授权已过期，请重新核对。',clock_rollback:'授权时间无效，请重新核对。',epoch_changed:'安全状态已变化，旧操作不能继续。',invalid_challenge:'本次验证已失效，请重新开始。',challenge_expired:'本次验证已过期，请重新开始。',verification_failed:'演示密码不匹配，请重新输入。',execution_in_progress:'这项操作已经提交，请先核实结果。',execution_consumed:'这次执行标识已经使用，不能重复操作。',already_completed:'这项安排已有完成回执，不会再次执行。',invalid_permit:'执行许可无效，操作未提交。',invalid_result:'执行结果无效，不能记录为完成。',result_mismatch:'回执与原执行结果不一致。',recovery_required:'请先发起演示恢复验证。',safety_state_invalid:'安全状态无法核对，已停止操作。'};
 
 export class SafetyError extends Error{
- constructor(code){super(code==='paused'?'伙伴已暂停，请恢复后重新核对安排。':code==='not_due'?'还未到约定执行时间。':MESSAGES[code]||'安全校验未通过，操作未提交。');this.name='SafetyError';this.code=code;}
+ constructor(code){super(code==='timed_freeze'?'密码连续输错三次，账户已冻结10分钟。请稍后重新核对。':code==='paused'?'伙伴已暂停，请恢复后重新核对安排。':code==='not_due'?'还未到约定执行时间。':MESSAGES[code]||'安全校验未通过，操作未提交。');this.name='SafetyError';this.code=code;}
 }
 const fail=code=>{throw new SafetyError(code);};
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.getPrototypeOf(value)===Object.prototype;
@@ -134,6 +135,7 @@ function transferTotal(state,snapshot,safety,excludeExecutionId,now){
 }
 
 export function classifyOperation(state,operation,options={}){
+ refreshTimedFreeze(state,options);
  const safety=ensureSafety(state),{snapshot}=normalizeOperation(operation),reasons=[],flags=new Set(snapshot.riskFlags.map(flag=>flag.replaceAll('-','_'))),source=sourceInfo(options.source);
  if(snapshot.kind==='risk_transfer')flags.add('unverified_recipient');
  try{const p=JSON.parse(snapshot.parameters);if(p.payee_id==='unknown'||p.payeeId==='unknown'||p.recipientVerified===false||p.recipient_status==='unverified')flags.add('unverified_recipient');}catch{}
@@ -158,6 +160,7 @@ export function classifyOperation(state,operation,options={}){
 }
 
 export function authorizeSafety(state,operation,options={}){
+ refreshTimedFreeze(state,options);
  const safety=ensureSafety(state),now=nowValue(state,options),{snapshot,binding}=normalizeOperation(operation);
  try{assertUser(options.source,snapshot,now);}catch(error){recordSafetySignal(state,{kind:'unauthorized_attempt',operationId:snapshot.id,source:options.source},options);deny(state,error.code,snapshot,options);}
  const classification=classifyOperation(state,operation,options);
@@ -345,7 +348,12 @@ export function recordSafetySignal(state,signal,options={}){
 
 export function lockSafety(state,reason='manual_lock',options={}){
  const safety=ensureSafety(state),now=nowValue(state,options);
- invalidateEpoch(safety,now);safety.locked=true;safety.lock={id:freshId('lock'),reason:safeCode(reason,'suspicious_activity'),at:now,epoch:safety.epoch};
+ // A password cooldown can temporarily cover an existing risk lock, but expiry
+ // must restore that underlying lock rather than washing its risk away.
+ const timed=['password_failures','verification_failures'].includes(reason);
+ const previous=timed&&safety.locked&&safety.lock?clone(safety.lock):null;
+ const underlying=previous&&['password_failures','verification_failures'].includes(previous.reason)?previous.underlyingLock||null:previous;
+ invalidateEpoch(safety,now);safety.locked=true;safety.lock={id:freshId('lock'),reason:safeCode(reason,'suspicious_activity'),at:now,epoch:safety.epoch,...(timed?{expiresAt:now+PASSWORD_FREEZE_MS,...(underlying?{underlyingLock:underlying}:{})}:{})};
  auditSafety(state,{type:'locked',reason:safety.lock.reason,status:'locked'},options);
  return freeze(clone(safety.lock));
 }
@@ -357,6 +365,20 @@ function invalidateEpoch(safety,now){
  for(const entry of Object.values(safety.executions))if(entry.status==='pending'){entry.status='interrupted';entry.interruptedAt=now;entry.requiresReview=true;}
 }
 
+/** Only the known demonstration password lock expires. Invalid or unknown lock
+ * records remain locked. Expiry invalidates old permits again and never replays. */
+export function refreshTimedFreeze(state,options={}){
+ const safety=ensureSafety(state),now=nowValue(state,options),lock=safety.lock;
+ const timed=safety.locked&&lock&&['password_failures','verification_failures'].includes(lock.reason)&&Number.isSafeInteger(lock.at)&&Number.isSafeInteger(lock.expiresAt)&&lock.expiresAt===lock.at+PASSWORD_FREEZE_MS;
+ if(!timed)return freeze({changed:false,released:false,locked:safety.locked,expiresAt:null,remainingMs:0});
+ if(now<lock.at)fail('clock_rollback');
+ if(now<lock.expiresAt)return freeze({changed:false,released:false,locked:true,expiresAt:lock.expiresAt,remainingMs:lock.expiresAt-now});
+ invalidateEpoch(safety,now);safety.lock=lock.underlyingLock?{...clone(lock.underlyingLock),epoch:safety.epoch}:null;safety.locked=!!safety.lock;
+ safety.failures.password=0;safety.failures.verification=0;safety.failures.consecutive=0;
+ auditSafety(state,{type:'timed_freeze_expired',reason:'password_freeze_elapsed',status:'awaiting_confirmation'},options);
+ return freeze({changed:true,released:!safety.locked,locked:safety.locked,expiresAt:lock.expiresAt,remainingMs:0,requiresReauthorization:true,automaticReplay:false});
+}
+
 // Manual pause invalidates in-flight writes without pretending a security lock occurred.
 export function invalidateSafetyEpoch(state,reason='manual_pause',options={}){
  const safety=ensureSafety(state),now=nowValue(state,options);invalidateEpoch(safety,now);
@@ -365,8 +387,10 @@ export function invalidateSafetyEpoch(state,reason='manual_pause',options={}){
 }
 
 export function beginRecovery(state,options={}){
+ refreshTimedFreeze(state,options);
  const safety=ensureSafety(state),now=nowValue(state,options);assertUser(options.source,null,now);
  if(!safety.locked||!safety.lock)fail('recovery_required');
+ if(['password_failures','verification_failures'].includes(safety.lock.reason)&&Number.isFinite(safety.lock.expiresAt))fail('timed_freeze');
  const previous=Object.values(safety.challenges).find(challenge=>challenge.purpose==='recovery'&&challenge.epoch===safety.epoch&&challenge.status==='pending'&&challenge.expiresAt>now);
  if(previous)return freeze(clone(previous));
  const challenge={id:freshId('recovery'),purpose:'recovery',method:'local-demo-password',level:'red',lockId:safety.lock.id,epoch:safety.epoch,status:'pending',createdAt:now,expiresAt:now+safety.policy.challengeTTL,attempts:0,maxAttempts:safety.policy.failureThreshold};
@@ -375,6 +399,8 @@ export function beginRecovery(state,options={}){
 }
 
 export function recoverSafety(state,options={}){
+ const current=ensureSafety(state);
+ if(current.locked&&['password_failures','verification_failures'].includes(current.lock?.reason)&&Number.isFinite(current.lock.expiresAt))fail('timed_freeze');
  const {safety,now,challenge}=challengeFor(state,options.challengeId,'recovery',options);assertUser(options.source,null,now);
  if(!safety.locked||challenge.lockId!==safety.lock?.id)fail('recovery_required');
  if(typeof options.code!=='string'||options.code!==DEMO_VERIFICATION_CODE)return badCode(state,challenge,options);

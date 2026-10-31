@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {modelConnectionState,saveModelConnection,normalizeModelStatus,activateOfficialChat,selectModelProvider,CHAT_PROFILES} from '../web/model-connection.mjs';
 
+test('Micu defaults to deepseek-flash without replacing an edited session model or official profile',()=>{
+ assert.equal(CHAT_PROFILES.find(p=>p.id==='micu').model,'deepseek-flash');
+ assert.equal(CHAT_PROFILES.find(p=>p.id==='minimax-official').model,'MiniMax-M3.1-Flash');
+ const status=normalizeModelStatus({provider:'micu',provider_switch:true,model:'my-chosen-model'});
+ assert.equal(status.model,'my-chosen-model');
+ assert.equal(status.providers.find(p=>p.id==='micu').model,'my-chosen-model');
+});
+
 test('disabled service and disabled planner prevent key submission with specific feedback',async()=>{
  for(const status of [{enabled:false,configured:false},{enabled:true,provider:'minimax-official',agent_enabled:false,configured:false}]){
   assert.equal(modelConnectionState(status).canConfigure,false);

@@ -4,7 +4,7 @@ MODEL = 'MiniMax-M3.1-Flash'
 BASE = 'https://api.minimax.cn/v1'
 HOST = 'api.minimax.cn'
 MICU_PROVIDER = 'micu'
-MICU_MODEL = 'deepseek-v4-flash-0731'
+MICU_MODEL = 'deepseek-flash'
 MICU_BASE = 'https://www.micuapi.ai/v1'
 PROFILES = {
     PROVIDER: {'id': PROVIDER, 'label': 'MiniMax 官方', 'model': MODEL, 'base_url': BASE},

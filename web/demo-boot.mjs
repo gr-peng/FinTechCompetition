@@ -3,7 +3,7 @@ import {invalidateSafetyEpoch,auditSafety} from './safety-policy.mjs';
 
 // A new document is a new card/chat demonstration. Hash navigation never calls
 // this. Financial facts, completed receipts and connection cookies stay intact.
-export function resetDemoOnBoot(state){
+export function resetDemoOnBoot(state,{resetCards=true}={}){
  const eventCursor=state.companion?.eventCursor;
  resetBotPresentation(state);
  invalidateSafetyEpoch(state,'page_reloaded');
@@ -15,7 +15,9 @@ export function resetDemoOnBoot(state){
   for(const signal of state.safety.signals)signal.mitigated=true;
   auditSafety(state,{type:'demo_run_reset',reason:'page_reloaded'});
  }
- if(state.bankCards)delete state.bankCards.credit;
+ if(resetCards&&state.bankCards)delete state.bankCards.credit;
+ state.savingsCoach=null;state.savingsEditor=null;state.savingsCancelId=null;state.savingsArchiveId=null;
+ for(const jar of [...Object.values(state.savingsJars||{}),state.savingsJar].filter(Boolean))if(jar.status==='active')jar.status='paused_safety';
  state.messages=[];state.conversationArchives=[];state.agentDraftHistory={};
  state.agentLastReceipt=null;
  for(const task of state.tasks||[]){

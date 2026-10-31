@@ -10,7 +10,7 @@ class UnavailableTests(unittest.TestCase):
         conn.getresponse.return_value = response
         payload = {'validation_scope':'finpilot-fifteen-v1','text':'hi','tool_catalog':[], 'run_history':[]}
         with self.assertRaises(ProviderError) as caught:
-            run_provider(payload, 'unit-test-only', 'deepseek-v4-flash-0731', 'test', lambda *a, **k: conn)
+            run_provider(payload, 'unit-test-only', 'deepseek-flash', 'test', lambda *a, **k: conn)
         error = caught.exception
         self.assertEqual(error.code, 'provider_error')
         self.assertEqual(error.diagnostic['upstream_status'], 503)

@@ -68,6 +68,7 @@ function setup({adapterHook,effectHook,persistHook,snapshot}={}){
   if(notifyRunner)demo.setLocked(true,reason);
  }
  function recover(){
+  if(current.safety.lock?.expiresAt){clock.set(new Date(current.safety.lock.expiresAt).toISOString());const n=copy(current);policy.refreshTimedFreeze(n,{now:now()});current=n;bridge.invalidate();demo.setLocked(false);return null;}
   const next=copy(current),challenge=policy.beginRecovery(next,{source:USER,now:now()});
   assert.equal(policy.recoverSafety(next,{challengeId:challenge.id,code:policy.DEMO_VERIFICATION_CODE,source:USER,now:now()}).ok,true);
   current=next;bridge.invalidate();demo.setLocked(false);return challenge;
@@ -209,7 +210,7 @@ test('the actual no-DOM controller handles voice mismatch and password lock with
   for(let index=0;index<3;index++)assert.equal(await controller.handleAction('demo-password-fail',{},{}),false);
   assert.equal(current.safety.locked,false);assert.equal(current.safety.failures.password,0);
   controller.applyModelResult({scenario:'security_case',status:'propose',reply:'已找到陈宇，请核对这次转账。',speak:null,
-   fields:{case_id:'unfamiliar_recipient',recipient_name:'陈宇',amount_minor:30000},missing:[],mode:'create',task_id:null,query:null,period_month:null,
+   fields:{case_id:'unfamiliar_recipient',recipient_name:'陈宇',recipient_card_number:'0000000000006217',amount_minor:30000},missing:[],mode:'create',task_id:null,query:null,period_month:null,
    context_action:'none',cards:[{type:'security_notice'}],actions:[{type:'show_security_case'}]});
   const recipientId=current.companion.recipient.id;
   assert.equal(current.companion.recipient.status,'review');assert.equal(current.companion.recipient.review.status,'matched');
@@ -225,9 +226,9 @@ test('the actual no-DOM controller handles voice mismatch and password lock with
   assert.equal(current.safety.locked,true);assert.equal(current.safety.lock.reason,'password_failures');
   assert.equal(current.safety.audit.some(event=>event.type==='locked'),true);assert.equal(errors.length,3);
   assert.match(errors[0],/演示密码不匹配/);assert.match(errors[2],/安全保护已开启/);
-  await controller.handleAction('safety-recover',{}, {isTrusted:true});
-  const recovery=Object.values(current.safety.challenges).find(c=>c.purpose==='recovery'&&c.status==='pending');assert.ok(recovery);
-  await controller.handleSubmit({target:{id:'safety-challenge-form',dataset:{challenge:recovery.id,purpose:'recovery'},fields:{challengeCode:policy.DEMO_VERIFICATION_CODE}}});
+  assert.match(controller.render(),/10分钟/);assert.doesNotMatch(controller.render(),/safety-recover|recipient-confirm|safety-challenge-form/);
+  await assert.rejects(()=>controller.handleAction('safety-recover',{}, {isTrusted:true}),isSafetyError('timed_freeze'));
+  controller.clock.set(new Date(current.safety.lock.expiresAt).toISOString());controller.sync();
   assert.equal(current.safety.locked,false);assert.equal(errors.length,3);assert.equal(current.safety.grants[grant.id].status,'revoked');
   await controller.manager.tick({execute:true});
   assert.equal(current.balance,baseline.balance);assert.equal(current.ledger.length,baseline.rows);assert.equal(Object.keys(current.safety.executions).length,0);

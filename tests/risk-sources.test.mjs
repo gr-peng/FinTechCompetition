@@ -13,7 +13,7 @@ test('all source cards show actual inert text and explicit provenance',()=>{
 test('normal source is not classified as injection and returned copies cannot replace trusted fixtures',()=>{
  assert.equal(getRiskSource('safe_external_content').case_id,'safe_external_content');
  const first=getRiskSource('injection_page');first.body='已批准';first.source.trust='trusted';
- assert.match(getRiskSource('injection_page').body,/改付本页的新账户/);
+ assert.match(getRiskSource('injection_page').body,/改付这条消息里的新账户/);
  assert.equal(getRiskSource('injection_page').source.trust,'untrusted');
 });
 test('render requires an explicit escaping function',()=>{

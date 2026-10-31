@@ -154,6 +154,14 @@ function compoundGraph(fields, fixtures, now) {
         recipient_id:contact.id,recipient_name:contact.name,phone:contact.phone,message:item.message,
         contact_source:'synthetic_contact_fixture',synthetic:true,
       },dependencies));previous=id;
+    }else if(item.kind==='ride'){
+      if(instant(item.date+'T'+item.departure_time+':00+08:00')<instant(now))throw Error('请确认未来的顺风车出发时间');
+      if(item.origin===item.destination)throw Error('出发地和目的地不能相同');
+      const id=item.id+'.ride.reserve';nodes.push(step(id,'预约回家顺风车','rides_demo','reserve_ride',{
+        date:item.date,departure_time:item.departure_time,origin:item.origin,destination:item.destination,
+        fare_minor:item.fare_minor,source_account:item.source_account,currency:'CNY',
+        fare_type:'maximum_approved',payment_status:'unpaid',synthetic:true,
+      },dependencies));previous=id;
     }else{
       if(instant(item.date+'T'+item.pickup_time+':00+08:00')<instant(now))throw Error('请确认未来的蛋糕自取时间');
       const cake=fixtures.cake,contact=fixtures.contacts.find(c=>c.id===cake.contact_id);
@@ -222,7 +230,7 @@ export function createLocalDemoAdapters({ fixtures = PROACTIVE_DEMO_FIXTURES, fa
   return Object.freeze({
     mode: 'local_demo',
     async execute({ plan_id, step: node, idempotency_key, now }) {
-      if (!['meituan_demo', 'contacts_demo', 'payments_demo', 'calendar_demo', 'subscriptions_demo'].includes(node.app)) throw Error('仅支持本地演示适配器');
+      if (!['meituan_demo', 'contacts_demo', 'payments_demo', 'calendar_demo', 'subscriptions_demo', 'rides_demo'].includes(node.app)) throw Error('仅支持本地演示适配器');
       const signature = stable({ app: node.app, operation: node.operation, payload: node.payload });
       if (succeeded.has(idempotency_key)) {
         const prior = succeeded.get(idempotency_key);
@@ -241,6 +249,7 @@ export function createLocalDemoAdapters({ fixtures = PROACTIVE_DEMO_FIXTURES, fa
         : node.operation === 'search_restaurant' ? { candidates: [clone(fixtures.restaurant)] }
         : node.operation === 'resolve_contact' ? { contact: clone(fixtures.contacts.find(c => c.id === node.payload.contact_id)) }
         : node.operation === 'schedule_local_task' ? { queue_entry: { scheduled_for: node.payload.scheduled_for, clock_mode: 'explicit_virtual_demo' } }
+        : node.operation === 'reserve_ride' ? { simulated_result:node.operation,parameters:clone(node.payload),ride_reservation:{status:'reserved',fare_cap_minor:node.payload.fare_minor,paid_minor:0,date:node.payload.date,departure_time:node.payload.departure_time,origin:node.payload.origin,destination:node.payload.destination} }
         : { simulated_result: node.operation, parameters: clone(node.payload) };
       const result = { status: 'succeeded', receipt_id: 'DEMO:' + idempotency_key,
         evidence: { mode: 'local_demo', app: node.app, operation: node.operation, at: iso(now), plan_id,
@@ -320,9 +329,9 @@ export function createProactiveDemo({ clock = createDemoClock(), safetyGate, ada
       if(!replacement||stable(replacement.payload)!==stable(old.payload))throw Error('已完成步骤不能直接修改，请保留回执并新建安排');
       Object.assign(replacement,clone(old));
     }
-    plan.title=(clean.items||[]).map(i=>i.kind==='sms'?'短信给'+(fixtures.contacts.find(c=>c.id===i.contact_id)?.name||'联系人'):'订蛋糕').join('、')||'待办安排';
+    plan.title=(clean.items||[]).map(i=>i.kind==='sms'?'短信给'+(fixtures.contacts.find(c=>c.id===i.contact_id)?.name||'联系人'):i.kind==='ride'?'预约回家顺风车':'订蛋糕').join('、')||'待办安排';
     plan.fields=clean;plan.missing=missing;plan.steps=nodes;
-    plan.planned_total_minor=missing.length?null:clean.items.filter(i=>i.kind==='cake').length*fixtures.cake.amount_minor;
+    plan.planned_total_minor=missing.length?null:clean.items.reduce((n,i)=>n+(i.kind==='cake'?fixtures.cake.amount_minor:i.kind==='ride'?i.fare_minor:0),0);
     refreshPlan(plan);
   }
   function createCompoundPlan(fields={},options={}) {

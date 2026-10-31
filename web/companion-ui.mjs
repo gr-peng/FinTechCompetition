@@ -6,6 +6,8 @@ const readable=value=>reasons[value]||(/^[a-z0-9_:-]+$/i.test(value||'')?'当前
 export function riskBadge(classification,{esc}){return `<span class="companion-risk companion-risk-${esc(classification?.level||'yellow')}">${esc(classification?.riskBlocked?'高风险 已阻断':riskLabel(classification?.level)+(classification?.level==='green'?(classification.writes?' 需确认':' 只读'):''))}</span>`;}
 export function renderSafetyBanner(safety,{esc}){
  if(!safety?.locked)return '';
+ const lock=safety.lock||safety,reason=lock.reason||safety.lockReason;
+ if(['password_failures','verification_failures'].includes(reason)&&Number.isFinite(lock.expiresAt))return '<section class="companion-lock companion-inline card" role="status" data-timed-freeze="true"><strong>账户已冻结10分钟</strong><p>密码连续输错三次，请稍后重新核对。钱没有转出。</p></section>';
  return `<section class="companion-lock card" role="status"><div class="row between"><strong>安全保护已开启</strong><span class="companion-risk companion-risk-red">写操作已暂停</span></div><p>${esc(readable(safety.lockReason||safety.reason)||'检测到连续异常，请先验证。')}</p><p class="muted">在途授权已失效。恢复后仍需重新核对，不会自动重试。</p><button class="primary full" data-action="safety-recover">验证后恢复</button></section>`;
 }
 export function renderChallenge(challenge,{esc,recovery=false,embedded=false,review=false}={}){

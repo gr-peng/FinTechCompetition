@@ -4,7 +4,7 @@ import {fresh,createTask,transition} from '../web/engine.mjs';
 import {ensureFinance,postOperation,syncFinance,ledgerView} from '../web/finance-state.mjs';
 import {parameterFingerprint} from '../web/task-parameters.mjs';
 import {acquireTaskExecution,commitTaskExecution} from '../web/task-safety.mjs';
-import {lockSafety,beginRecovery,recoverSafety,DEMO_VERIFICATION_CODE} from '../web/safety-policy.mjs';
+import {lockSafety,beginRecovery,recoverSafety,DEMO_VERIFICATION_CODE,refreshTimedFreeze} from '../web/safety-policy.mjs';
 import {verifyForTest,userConsent} from './safety-fixture.mjs';
 
 function ready({kind='salary',commit=true}={}){
@@ -94,11 +94,11 @@ for(const [name,change] of Object.entries(proofChanges))test(`new finance write 
  deniedWithoutMutation(state,task,/安全回执/);
 });
 
-test('lock and controlled recovery cannot replay a pre-lock completed callback into a new row',()=>{
+test('password freeze and expiry cannot replay a pre-lock completed callback into a new row',()=>{
  const {state,task}=ready();
  lockSafety(state,'password_failures');
- const challenge=beginRecovery(state,{source:userConsent});
- recoverSafety(state,{challengeId:challenge.id,code:DEMO_VERIFICATION_CODE,source:userConsent});
+ assert.throws(()=>beginRecovery(state,{source:userConsent}),error=>error.code==='timed_freeze');
+ refreshTimedFreeze(state,{now:state.safety.lock.expiresAt});
  assert.equal(state.safety.locked,false);
  deniedWithoutMutation(state,task,/安全回执/);
 });

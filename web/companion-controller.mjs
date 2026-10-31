@@ -1,3 +1,5 @@
+import * as savings from './savings-coach.mjs';
+import {resetDemoOnBoot} from './demo-boot.mjs';
 import {planOutcome} from './task-feedback.mjs';
 import {getRiskSource} from './risk-sources.mjs';
 import {createConfiguredMiniMax} from './minimax-tts.mjs';
@@ -60,6 +62,7 @@ export function birthdayPaymentSummary(plan,{now=Date.now(),paused=false}={}){
 export function createCompanionController(host){
  const {getState,commit,esc:e}=host;
  let manager,voice,voiceView={text:'语音未开启',identity:'unknown',armed:null,listening:false,buffer:[],interim:'',confirmationRequest:null},epoch,activeChallenge=null;
+ let runGeneration=0;
  let lastSpoken=null,ttsKind='local',disposed=false,awaitingModel=false,selectedPlanId=null,selectedDraft=null;const readRuns=new Map(),runningPlans=new Set();
  const initial=clone(getState());policy.ensureSafety(initial);
  initial.companion??={};initial.companion.runId??=crypto.randomUUID().slice(0,8);initial.companion.reviewWindows??={};initial.companion.planGrants??={};initial.companion.pausedPlans??={};
@@ -89,7 +92,7 @@ export function createCompanionController(host){
  function userMessage(text){const next=clone(getState());next.messages.push({id:crypto.randomUUID(),role:'user',text});save(next,{paint:false});}
  function activePlan(){const id=getState().companion?.activePlanId;if(!id)return null;try{return manager.getPlan(id);}catch{return null;}}
  function contextFor(plan,node,phase='before_execute'){return {phase,now:clock.now(),mode:'local_demo',plan_id:plan.id,revision:plan.revision,step:node,source:plan.source};}
- function toOperation(context){if(context.plan_id?.startsWith('recipient-')){const r=getState().companion.recipient;if(!r||r.id!==context.plan_id||r.revision!==context.revision||r.status==='cancelled'||!validateRecipientReview(r.review,r.input))throw Error('收款核对已变化，旧请求不会执行。');return recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt});}const op=proactiveSafetyOperation(context);op.id='case:'+getState().companion.runId+':'+op.id;op.taskId=op.id;op.target=readableTarget(op.target);return op;}
+ function toOperation(context){if(context.plan_id?.startsWith('recipient-')){const r=getState().companion.recipient;if(!r||r.id!==context.plan_id||r.revision!==context.revision||r.status==='cancelled'||!validateRecipientReview(r.review,r.input,{history:getState().recipientHistory||[]}))throw Error('收款核对已变化，旧请求不会执行。');return recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt,history:getState().recipientHistory||[]});}const op=proactiveSafetyOperation(context);op.id='case:'+getState().companion.runId+':'+op.id;op.taskId=op.id;op.target=readableTarget(op.target);return op;}
  function operationFor(plan,node){return toOperation(contextFor(plan,node));}
  function findPlanOperation(id){for(const plan of manager.snapshot().plans)for(const node of plan.steps){const operation=operationFor(plan,node);if(operation.id===id)return {plan,node,operation};}return null;}
  function commitEffect(next,{operation,result,context}){
@@ -117,7 +120,7 @@ export function createCompanionController(host){
  function getConfirmationSnapshot(id){
   const state=getState(),expiry=state.companion.reviewWindows[id];let op;
   if(state.companion.paper?.operation?.id===id)op=state.companion.paper.operation;
-  else if(state.companion.recipient?.id===id&&state.companion.recipient.review)op=recipientOperation(state.companion.recipient.review,{id,revision:state.companion.recipient.revision,expiresAt:state.companion.recipient.expiresAt});
+  else if(state.companion.recipient?.id===id&&state.companion.recipient.review)op=recipientOperation(state.companion.recipient.review,{id,revision:state.companion.recipient.revision,expiresAt:state.companion.recipient.expiresAt,history:state.recipientHistory||[]});
   else op=findPlanOperation(id)?.operation;
   if(!op){const t=state.tasks.find(t=>t.id===id);if(t&&!ended.has(t.status)&&['permission','review'].includes(t.status))op=taskOperation(state,t);}
   if(!op||!expiry||expiry<=now()||state.safety.locked||state.paused)return null;
@@ -153,17 +156,19 @@ export function createCompanionController(host){
  function voiceSource(event,op){const snapshot=getConfirmationSnapshot(event.card.taskId),card={...event.card,expiresAt:event.expiresAt};if(!sameConfirmation(snapshot,card,now()))throw Error('确认窗口或参数已变化，请重新核对。');return {kind:'user',method:'voice',explicit:true,voiceMatch:event.identity?.status||event.identity?.match||'unknown',confirmation:{...card,action:op.kind}};}
  async function handleVoiceConfirmation(event){
   const id=event.card.taskId,planStep=findPlanOperation(id),paper=getState().companion.paper;
-  if(getState().companion.recipient?.id===id)return confirmRecipient(voiceSource(event,recipientOperation(getState().companion.recipient.review,{id,revision:getState().companion.recipient.revision,expiresAt:getState().companion.recipient.expiresAt})));
+  if(getState().companion.recipient?.id===id)return confirmRecipient(voiceSource(event,recipientOperation(getState().companion.recipient.review,{id,revision:getState().companion.recipient.revision,expiresAt:getState().companion.recipient.expiresAt,history:getState().recipientHistory||[]})));
   if(planStep)return authorizePlan(planStep.plan.id,{only:[planStep.node.id],source:voiceSource(event,planStep.operation)});
   if(paper?.operation.id===id)return confirmPaper(voiceSource(event,paper.operation));
   const t=getState().tasks.find(t=>t.id===id);if(t)host.onTaskConsent(t.id,voiceSource(event,taskOperation(getState(),t)));
  }
- function focusPlan(plan){selectedPlanId=plan.id;selectedDraft=null;const next=clone(getState());next.companion.activePlanId=plan.id;next.companion.paper=null;next.companion.origin=null;next.companion.blockedTaskId=null;next.agentWorkspaceVisible=false;for(const node of plan.steps)ensureWindow(next,operationFor(plan,node).id);save(next);host.toBot?.();if(!plan.missing.length){const readRun=Promise.resolve(manager.run(plan.id)).then(()=>{save();host.onInlineUpdated?.();}).catch(error=>host.onError?.(error.message)).finally(()=>readRuns.delete(plan.id));readRuns.set(plan.id,readRun);}}
+ function focusPlan(plan){const generation=runGeneration;selectedPlanId=plan.id;selectedDraft=null;const next=clone(getState());next.companion.activePlanId=plan.id;next.companion.paper=null;next.companion.origin=null;next.companion.blockedTaskId=null;next.agentWorkspaceVisible=false;for(const node of plan.steps)ensureWindow(next,operationFor(plan,node).id);save(next);host.toBot?.();if(!plan.missing.length){const readRun=Promise.resolve(manager.run(plan.id)).then(()=>{if(generation===runGeneration){save();host.onInlineUpdated?.();}}).catch(error=>{if(generation===runGeneration)host.onError?.(error.message);}).finally(()=>readRuns.delete(plan.id));readRuns.set(plan.id,readRun);}}
  function validPlanGrant(op){try{return policy.validateGrant(clone(getState()),op,{grantId:getState().companion.planGrants[op.id],now:now()});}catch{return null;}}
  async function runPlan(id){
+  const generation=runGeneration;
   if(runningPlans.has(id))throw Error('这一步正在处理，请稍候。');
   const before=new Set(manager.getPlan(id).steps.filter(n=>n.status==='succeeded'&&n.receipt_id).map(n=>n.id));runningPlans.add(id);
-  try{await manager.run(id);}finally{runningPlans.delete(id);save();host.onInlineUpdated?.();}
+  try{await manager.run(id);}finally{runningPlans.delete(id);if(generation===runGeneration){save();host.onInlineUpdated?.();}}
+  if(generation!==runGeneration)return;
   const plan=manager.getPlan(id),upcoming=nextPlanStep(plan),willSummarize=planOutcome(plan,{now:now(),granted:!!upcoming&&!!validPlanGrant(operationFor(plan,upcoming)),paused:!!getState().companion.pausedPlans[id]}).collapse,completed=plan.steps.filter(n=>n.confirmation_required&&n.status==='succeeded'&&n.receipt_id&&!before.has(n.id));
   for(const node of completed){const text=PLAN_ACTIONS[node.operation]?.done||'这一步已完成';append(text+'。',{kind:'execution_receipt',evidence:{status:'completed',receipt:node.receipt_id},speak:willSummarize?null:text+'。',planId:id});}
   if(completed.length&&!getState().reduceMotion){feedback={planId:id,node:completed.at(-1)};clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>{feedback=null;host.onInlineUpdated?.();},950);}
@@ -195,19 +200,28 @@ export function createCompanionController(host){
  function registerPaper(input){const next=clone(getState());next.companion.origin=clone(input.source);next.companion.paper={input:clone(input),status:'details',origin:input.source};next.companion.activePlanId=null;next.agentWorkspaceVisible=false;save(next);host.toBot?.(input.source);append('先核对数量和价格，再决定是否执行。');}
  function confirmPaper(source=USER){const next=clone(getState()),paper=next.companion.paper;if(!paper||paper.status!=='review')throw Error('请先核对买卖参数。');const grant=policy.authorizeSafety(next,paper.operation,{source,now:now()});paper.grantId=grant.grantId;paper.status=grant.status==='verification_required'?'verify':'ready';if(paper.status==='verify')activeChallenge={...policy.beginChallenge(next,paper.operation,{grantId:grant.grantId,now:now()}),paper:true};save(next);if(paper.status==='ready')executePaper();}
  function executePaper(){const next=clone(getState()),paper=next.companion.paper;if(!paper)throw Error('当前没有待执行买卖。');const result=executePaperTrade(next,paper.review,paper.input.requestId,{grantId:paper.grantId,now:now(),currentEpoch:getState().safety.epoch,currentLocked:getState().safety.locked,currentPaused:getState().paused});paper.status='done';paper.receipt=result.receipt;activeChallenge=null;save(next);append('这笔买卖已写入本地持仓与流水。',{kind:'execution_receipt',evidence:{status:'completed',receipt:result.receipt}});}
- function sync(){const s=getState();if(s.safety?.epoch!==epoch){epoch=s.safety.epoch;voice?.cancel();voice?.disarmConfirmation('safety-changed');clearVoiceInput();bridge.invalidate();host.onSafetyEpoch?.();manager.setLocked(!!s.safety.locked||!!s.paused,s.safety.lock?.reason||'安全状态已变化');const next=clone(s);next.companion.proactiveSnapshot=manager.snapshot();commit(next,{paint:false});}}
+ function sync(){const timed=clone(getState());if(policy.refreshTimedFreeze(timed,{now:now()}).changed){activeChallenge=null;if(timed.companion.recipient?.status==='verify')timed.companion.recipient.status='review';save(timed,{paint:false});}const s=getState();if(s.safety?.epoch!==epoch){epoch=s.safety.epoch;voice?.cancel();voice?.disarmConfirmation('safety-changed');clearVoiceInput();bridge.invalidate();host.onSafetyEpoch?.();manager.setLocked(!!s.safety.locked||!!s.paused,s.safety.lock?.reason||'安全状态已变化');const next=clone(s);next.companion.proactiveSnapshot=manager.snapshot();commit(next,{paint:false});}}
  function adoptSnapshot(){bridge.invalidate();voice?.cancel();voice?.disarmConfirmation('storage-changed');activeChallenge=null;const s=getState();clock.set(s.demoClock?.now||clock.now());const restored=s.companion?.proactiveSnapshot;manager=createProactiveDemo({clock,safetyGate:gate,adapters,fixtures,snapshot:restored?reconcileProactiveSnapshot(restored,s,{policy,toOperation,now:now()}).snapshot:null});epoch=s.safety.epoch;host.onSafetyEpoch?.();}
  function recordSignal(kind,extra={}){const next=clone(getState());policy.recordSafetySignal(next,{kind,source:{kind:'preset'},...extra},{now:now()});save(next);return next.safety;}
+ function resetConversation(){
+  runGeneration++;host.onStop?.();clearVoiceInput();bridge.invalidate();manager.reset();readRuns.clear();runningPlans.clear();clearTimeout(feedbackTimer);feedback=null;
+  const next=clone(getState());resetDemoOnBoot(next,{resetCards:false});next.tasks=[];next.savingsCoach=null;
+  if(next.savingsJar?.status==='active')next.savingsJar.status='paused';
+  next.companion={initialized:true,runId:crypto.randomUUID().slice(0,8),reviewWindows:{},planGrants:{},pausedPlans:{},eventScope:crypto.randomUUID().replaceAll('-','').slice(0,24)};
+  selectedPlanId=null;selectedDraft=null;activeChallenge=null;awaitingModel=false;replayMessageId=null;lastSpoken=null;clock.set(START);save(next);host.toBot?.();
+ }
  function resetView(){selectedPlanId=null;selectedDraft=null;activeChallenge=null;clearVoiceInput();const next=clone(getState());next.companion.activePlanId=null;next.companion.paper=null;next.companion.blockedTaskId=null;next.companion.origin=null;next.companion.modelDraft=null;next.companion.recipient=null;next.companion.securityNotice=null;save(next);}
  async function handleText(){return false;}
- async function advanceDemoClock(type){const target={advance_birthday_clock:'2026-11-09T05:14:00Z',advance_subscription_clock:'2026-11-28T01:00:00Z'}[type];if(!target||now()>Date.parse(target))throw Error('时钟不能倒退，请新开合成会话。');clock.set(target);await manager.tick({execute:true});save();for(const p of manager.snapshot().plans)summarizePlan(p.id,{speak:false});host.toBot?.();append('已核对到期安排，完成与暂停状态已更新。',{kind:'safety_status',speak:null});}
+ async function advanceDemoClock(type){const target={advance_birthday_clock:'2026-11-09T05:14:00Z',advance_subscription_clock:'2026-11-28T01:00:00Z'}[type];if(!target||now()>Date.parse(target))throw Error('时钟不能倒退，请新开合成会话。');clock.set(target);await manager.tick({execute:true});savingsTick();save();for(const p of manager.snapshot().plans)summarizePlan(p.id,{speak:false});host.toBot?.();append('已核对到期安排，完成与暂停状态已更新。',{kind:'safety_status',speak:null});}
  function inspectExternalSource(type){const source=getRiskSource(type),event=getState().companion.pendingEvent;if(!source||event?.type!==type||event.fixture_id!==source.source_id)return false;applySecurityCase(source.case_id,{}, {programEvent:true});return true;}
  function selectedPlan(){if(!selectedPlanId)return null;try{return manager.getPlan(selectedPlanId);}catch{return null;}}
- function modelContext(){const state=getState();let selected=state.companion.modelDraft||activePlan();if(!selected&&!state.agentDraft&&!state.agentFocus){selected=selectedDraft;if(!selected&&selectedPlanId)try{selected=manager.getPlan(selectedPlanId);}catch{}}return companionModelContext(state,selected);}
+ function modelContext(){const state=getState();const sc=savings.savingsModelContext(state);if(sc)return sc;let selected=state.companion.modelDraft||activePlan();if(!selected&&!state.agentDraft&&!state.agentFocus){selected=selectedDraft;if(!selected&&selectedPlanId)try{selected=manager.getPlan(selectedPlanId);}catch{}}return companionModelContext(state,selected);}
  function rememberModelFields(patch){const next=clone(getState());if(!next.companion.modelDraft)return;if(next.companion.modelDraft.scenario==='compound'){next.companion.modelDraft.fields=mergeCompoundFields(next.companion.modelDraft.fields,patch);next.companion.modelDraft.missing=compoundMissing(next.companion.modelDraft.fields);}else Object.assign(next.companion.modelDraft.fields,patch);save(next,{paint:false});}
- function hidePresentation({forget=false}={}){if(forget){selectedPlanId=null;selectedDraft=null;}else if(getState().companion.modelDraft)selectedDraft=clone(getState().companion.modelDraft);clearVoiceInput();activeChallenge=null;const next=clone(getState());next.companion.activePlanId=null;next.companion.paper=null;next.companion.recipient=null;next.companion.securityNotice=null;next.companion.modelDraft=null;next.agentWorkspaceVisible=false;save(next,{paint:false});}
+ function hidePresentation({forget=false}={}){if(forget&&getState().savingsCoach){const n=clone(getState());if(!['done','cancelled'].includes(n.savingsCoach.stage))savings.cancelSavingsCoach(n);n.savingsCoach=null;save(n,{paint:false});}if(forget){selectedPlanId=null;selectedDraft=null;}else if(getState().companion.modelDraft)selectedDraft=clone(getState().companion.modelDraft);clearVoiceInput();activeChallenge=null;const next=clone(getState());next.companion.activePlanId=null;next.companion.paper=null;next.companion.recipient=null;next.companion.securityNotice=null;next.companion.modelDraft=null;next.agentWorkspaceVisible=false;save(next,{paint:false});}
  function applyModelResult(raw,{programEvent=false,originTurnId=null}={}){
   const result=validateCompanionResult(raw);if(!result)return null;
+  if(result.scenario==='savings_coach')return applySavingsResult(result,{originTurnId,programEvent});
+  if(result.scenario==='plan_control'&&getState().savingsCoach?.id===result.task_id){if(result.fields.plan_action!=='cancel')throw Error('请使用储蓄卡上的暂停或调整按钮。');finishSavings(true);return {text:savings.savingsSummary(getState()),speak:null,companion:true,card:null,taskId:null,planId:getState().savingsCoach.id};}
   if(result.scenario==='plan_control'){const pendingDraft=getState().companion.modelDraft||selectedDraft;if(!programEvent&&result.fields.plan_action==='cancel'&&pendingDraft?.draft_id===result.task_id&&!pendingDraft.plan_id){selectedDraft=null;selectedPlanId=null;const next=clone(getState());next.companion.modelDraft=null;next.agentWorkspaceVisible=false;save(next);return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:activePlan()?.id||null};}if(!programEvent&&result.fields.plan_action==='cancel'&&getState().agentDraft?.id===result.task_id){const next=clone(getState());next.agentDraft=null;next.agentWorkspaceVisible=false;next.agentFocus=null;save(next);return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:activePlan()?.id||null};}const currentContext=modelContext(),current=currentContext?.plan_id?manager.getPlan(currentContext.plan_id):null;if(programEvent||!current||result.task_id!==current.id)throw Error('请先打开需要处理的当前安排。');if(current.status==='succeeded')throw Error('这份安排已完成，已完成记录会保留。');const next=clone(getState());next.companion.activePlanId=current.id;next.companion.modelDraft=null;selectedDraft=null;selectedPlanId=current.id;for(const n of current.steps)policy.revokeOperation(next,operationFor(current,n).id,{reason:'user_plan_control',now:now()});bridge.invalidate();activeChallenge=null;clearVoiceInput();if(result.fields.plan_action==='cancel')manager.cancel(current.id);else next.companion.pausedPlans[current.id]=result.fields.plan_action==='pause'?'user_pause':false;policy.auditSafety(next,{type:'authorization_revoked',operationId:current.id,reason:'user_plan_control'},{now:now()});save(next);summarizePlan(current.id,{speak:false});return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:activePlan()?.id||null};}
   const previous=activePlan()||(!selectedDraft?selectedPlan():null),draft=getState().companion.modelDraft||selectedDraft;
   if(result.context_action==='new'&&!programEvent)hidePresentation({forget:true});
@@ -234,6 +248,36 @@ export function createCompanionController(host){
   }else if(result.status==='answer'&&result.context_action!=='continue')hidePresentation();
   return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:activePlan()?.id||null};
  }
+ function tagSavings(next,originTurnId){const c=next.savingsCoach;if(!c)return;const m=next.messages.find(m=>m.id===originTurnId);if(m)m.planId=c.id;}
+ function applySavingsResult(result,{originTurnId,programEvent}){
+  if(programEvent)throw Error('外部消息不能创建储蓄授权。');
+  const existing=getState().savingsCoach;
+  if(result.context_action==='new'||!existing||['done','cancelled'].includes(existing.stage)){
+   hidePresentation({forget:true});const n=clone(getState());savings.startSavingsCoach(n,{now:now()});tagSavings(n,originTurnId);save(n,{paint:false});
+  }
+  const n=clone(getState()),c=n.savingsCoach,f=result.fields;
+  tagSavings(n,originTurnId);
+  if(f.proposal_action==='reject'){savings.cancelSavingsCoach(n);save(n,{paint:false});finishSavings(false);}
+  else {
+   if(c.stage==='proposal'&&f.reduction_minor!=null&&f.reduction_minor!==c.reduction_minor)savings.reviseSavingsProposal(n,c,{reduction_minor:f.reduction_minor});
+   if(['details','confirm'].includes(c.stage)){
+    const patch=Object.fromEntries(['daily_minor','source_account','start_date','target_minor'].filter(k=>Object.hasOwn(f,k)).map(k=>[k,f[k]]));
+    if(Object.keys(patch).length){n.savingsCoach=savings.updateSavingsFields(c,patch);savings.prepareSavingsPlan(n,n.savingsCoach,{now:now()});}
+   }
+   // A model's "accept" is a proposal, never a user execution permit.
+   save(n,{paint:false});
+  }
+  const coach=getState().savingsCoach;host.toBot?.();
+  return {text:result.reply,speak:result.speak,card:null,taskId:null,companion:true,planId:coach.id};
+ }
+ function finishSavings(cancel=false){
+  const n=clone(getState());if(cancel)savings.cancelSavingsCoach(n);const c=n.savingsCoach;
+  const summary=savings.savingsSummary(n);n.companion.planPresentations??={};n.companion.planPresentations[c.id]={collapse:true,title:'旅行储蓄安排',summary,status:c.stage==='done'?'已安排':'已取消'};
+  save(n,{paint:false});append(summary,{planId:c.id,planSummary:true,kind:'execution_receipt',speak:summary});
+ }
+ function savingsPermit(n,op){const grant=policy.authorizeSafety(n,op,{source:USER,now:now()});if(grant.status!=='ready')throw Error('请先完成当前安全核对。');return policy.acquireExecution(n,op,{grantId:grant.grantId,executionId:op.id+':'+op.revision,now:now()});}
+ function savingsTick(){const n=clone(getState()),before=JSON.stringify(savings.listSavingsJars(n));savings.tickSavingsPlan(n,{now:now()});if(before!==JSON.stringify(savings.listSavingsJars(n))){save(n,{paint:false});return true;}return false;}
+ function syncJarReceipt(n,jar){const text=jar.status==='cancelled'?`${jar.name||'储蓄罐'}计划已取消，已存金额保留。`:`${jar.name||'旅行储蓄罐'}当前计划：${jar.start_date}起每天${jar.at_time||'09:00'}从${jar.source_account==='salary_0826'?'工资账户0826':'生活账户1608'}存${money(jar.daily_minor)}，目标${money(jar.target_minor)}。`;for(const m of n.messages)if(m.planSummary&&[jar.coach_id,...(jar.coach_ids||[])].includes(m.planId)){m.text=text;m.speak=null;}if(n.companion?.planPresentations?.[jar.coach_id])n.companion.planPresentations[jar.coach_id].summary=text;}
  function applySecurityCase(caseId,fields={}, {programEvent=false}={}){
   if(caseId==='three_password_failures')return;
   const source=getRiskSource(getState().companion.pendingEvent?.type);
@@ -242,8 +286,8 @@ export function createCompanionController(host){
   const next=clone(getState());next.companion.activePlanId=null;next.companion.paper=null;next.companion.modelDraft=null;next.companion.recipient=null;activeChallenge=null;
   let title='安全核对',detail='',level='green';
   if(caseId==='unfamiliar_recipient'||caseId==='reported_scam'){
-   const review=reviewRecipient({reference:fields.recipient_reference||null,recipientName:fields.recipient_name||null,amountMinor:fields.amount_minor??null,sourceAccount:fields.source_account||null});
-   const input=Object.fromEntries(['reference','recipientName','purpose','amountMinor','sourceAccount'].map(k=>[k,review[k]]));
+   const review=reviewRecipient({reference:fields.recipient_reference||null,recipientName:fields.recipient_name||null,amountMinor:fields.amount_minor??null,sourceAccount:fields.source_account||'living_1608',cardNumber:fields.recipient_card_number||null},{history:next.recipientHistory||[]});
+   const input=Object.fromEntries(['reference','recipientName','purpose','amountMinor','sourceAccount','cardNumber'].map(k=>[k,review[k]]));
    next.companion.recipient={id:'recipient-'+crypto.randomUUID().slice(0,8),revision:1,input,review:review.missing.length?null:review,status:review.missing.length?'details':'review',expiresAt:now()+300000};
    ensureWindow(next,next.companion.recipient.id);
    if(review.status==='reported'){
@@ -260,7 +304,7 @@ export function createCompanionController(host){
    policy.recordSafetySignal(next,{kind:'prompt_injection',source:{kind:'preset'}},{now:now()});title='这条内容有风险';detail=fixture;level='red';
   }else if(caseId==='safe_external_content'){
    const op={id:'external-read:'+next.companion.runId,revision:1,kind:'read',target:source.title,parameters:'{}',source:{kind:'external'}};
-   policy.acquireExecution(next,op,{executionId:op.id+':'+next.safety.epoch,now:now()});title='取货信息已核对';detail='六寸草莓蛋糕188元，定金50元，11月9日16:00到店自取。当前只读取资料，没有下单或付款。';
+   policy.acquireExecution(next,op,{executionId:op.id+':'+next.safety.epoch,now:now()});title='取货信息已核对';detail='台灯128元，11月7日16:00到店自取。当前只核对消息，没有下单或付款。';
   }else if(caseId.startsWith('voice_')){
    const identity=caseId==='voice_matched'?'matched':caseId==='voice_mismatch'?'mismatched':'unknown';voiceView.identity=identity;voice.setIdentitySignal(identity);
    if(identity==='mismatched')policy.recordSafetySignal(next,{kind:'voice_mismatch',source:{kind:'preset'}},{now:now()});
@@ -270,27 +314,33 @@ export function createCompanionController(host){
   next.companion.securityNotice={caseId,title,detail,level,...(caseId.startsWith('prompt_injection')?{stage:'verify',sourceId:source.source_id}:{})};save(next,{paint:false});
  }
 
- function recipientContext(r,phase='before_execute',result){return {phase,mode:'local_demo',plan_id:r.id,revision:r.revision,now:clock.now(),source:{type:'user_request',trust:'user_intent'},step:{id:'recipient.transfer',title:'相机维修转账',operation:'transfer',app:'payments_demo',confirmation_required:true,attempts:0,payload:{recipient_id:r.review.target,amount_minor:r.review.amountMinor,currency:'CNY',source_account:r.review.sourceAccount,purpose:r.review.purpose}},...(result?{result}:{})};}
- function confirmRecipient(source=USER){const next=clone(getState()),r=next.companion.recipient;if(!r||r.status!=='review'||!validateRecipientReview(r.review,r.input))throw Error('请先重新核对收款信息。');const op=recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt});const g=policy.authorizeSafety(next,op,{source,now:now(),expiresAt:r.expiresAt});next.companion.planGrants[op.id]=g.grantId;r.status=g.status==='verification_required'?'verify':'ready';if(r.status==='verify')activeChallenge={...policy.beginChallenge(next,op,{grantId:g.grantId,now:now()}),recipient:true};save(next);if(r.status==='ready')return runRecipient();}
- async function runRecipient(){const r=clone(getState().companion.recipient);if(!r||r.status==='done')return;const context=recipientContext(r),before=gate(context);if(before.decision!=='allow')throw Error(before.reason);const n=clone(getState());if(n.companion.recipient?.id!==r.id)throw Error('核对已结束。');n.companion.recipient.status='running';save(n);try{const result=before.replay_result||await adapters.execute({plan_id:r.id,revision:r.revision,step:context.step,idempotency_key:r.id+':recipient.transfer:v'+r.revision,now:clock.now()});const after=gate({...context,phase:'after_execute',now:clock.now(),result});if(after.decision!=='allow')throw Error(after.reason);const next=clone(getState());if(next.companion.recipient?.id===r.id){next.companion.recipient.status='done';next.companion.recipient.receipt=result.receipt_id;save(next);append('已按核对的信息完成这一次转账。',{kind:'execution_receipt',evidence:{status:'completed',receipt:result.receipt_id}});}}catch(error){const next=clone(getState());if(next.companion.recipient?.id===r.id&&next.companion.recipient.status==='running'){next.companion.recipient.status='review';save(next);}throw error;}}
- function renderRecipient(){const r=getState().companion.recipient;if(!r)return '';if(r.status==='details')return `<section class="card companion-inline"><h3>核对收款信息</h3><form id="companion-recipient-form"><input type="hidden" name="reference" value="${e(r.input.reference||'')}"><label>收款人<input name="recipientName" value="${e(r.input.recipientName||'')}" required></label><label>备注（选填）<input name="purpose" value="${e(r.input.purpose||'')}"></label><label>金额（元）<input name="amount" type="number" min="0.01" step="0.01" value="${r.input.amountMinor?r.input.amountMinor/100:''}" required></label><label>付款账户<select name="sourceAccount" required><option value="">请选择</option><option value="living_1608" ${r.input.sourceAccount==='living_1608'?'selected':''}>生活账户 1608</option></select></label><button class="primary full" type="submit">核对信息</button><button class="quiet full" data-action="recipient-cancel" type="button">取消</button></form></section>`;const op=recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt}),classification=policy.classifyOperation(getState(),op,{now:now()});return `<section class="card companion-inline"><div class="row between"><h3>${e(op.target)}</h3>${riskBadge(classification,{esc:e})}</div><div class="plan-row"><span>${e(r.input.purpose)}</span><strong>${money(op.amountMinor)}</strong></div><p class="companion-card-meta">${e(r.status==='done'?'转账已完成。':r.review.status==='matched'?'首次转账，需密码确认。':r.review.status==='reported'?'存在多人举报，不能继续转账。':'信息尚未核实，暂不付款；请独立核实后修改。')}</p>${r.status==='done'?`<p>已核实完成</p><small class="receipt">${e(r.receipt)}</small>`:r.review.status==='matched'&&r.status==='review'?'<button class="primary full" data-action="recipient-confirm">确认这一次转账</button>':''}${r.status!=='done'?'<button class="quiet full" data-action="recipient-edit">修改信息</button><button class="quiet full" data-action="recipient-cancel">取消</button>':''}</section>`;}
- function compoundLabel(path,fields){const match=/^items\.([0-5])\.([a-z_]+)$/.exec(path);if(!match)return path;return (fields.items[Number(match[1])].kind==='sms'?'短信':'蛋糕')+({contact_id:'收件人',message:'内容',product_id:'品类',date:'日期',pickup_time:'自取时间',fulfillment:'领取方式',source_account:'付款账户',budget_minor:'预算'}[match[2]]||'');}
- function readModelForm(form){const patch=Object.fromEntries(new FormData(form));for(const [key,value] of Object.entries(patch)){if(key.endsWith('budget_minor')||key==='amount_minor')patch[key]=value===''?null:Math.round(Number(value)*100);else if(value==='')patch[key]=null;}return patch;}
+ function recipientContext(r,phase='before_execute',result){return {phase,mode:'local_demo',plan_id:r.id,revision:r.revision,now:clock.now(),source:{type:'user_request',trust:'user_intent'},step:{id:'recipient.transfer',title:'转账给'+r.input.recipientName,operation:'transfer',app:'payments_demo',confirmation_required:true,attempts:0,payload:{recipient_id:r.review.target,amount_minor:r.review.amountMinor,currency:'CNY',source_account:r.review.sourceAccount,purpose:r.review.purpose}},...(result?{result}:{})};}
+ function confirmRecipient(source=USER){const next=clone(getState()),r=next.companion.recipient;if(!r||r.status!=='review'||!validateRecipientReview(r.review,r.input,{history:getState().recipientHistory||[]}))throw Error('请先重新核对收款信息。');const op=recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt,history:getState().recipientHistory||[]});const g=policy.authorizeSafety(next,op,{source,now:now(),expiresAt:r.expiresAt,history:getState().recipientHistory||[]});next.companion.planGrants[op.id]=g.grantId;r.status=g.status==='verification_required'?'verify':'ready';if(r.status==='verify')activeChallenge={...policy.beginChallenge(next,op,{grantId:g.grantId,now:now()}),recipient:true};save(next);if(r.status==='ready')return runRecipient();}
+ async function runRecipient(){const r=clone(getState().companion.recipient);if(!r||r.status==='done')return;const context=recipientContext(r),before=gate(context);if(before.decision!=='allow')throw Error(before.reason);const n=clone(getState());if(n.companion.recipient?.id!==r.id)throw Error('核对已结束。');n.companion.recipient.status='running';save(n);try{const result=before.replay_result||await adapters.execute({plan_id:r.id,revision:r.revision,step:context.step,idempotency_key:r.id+':recipient.transfer:v'+r.revision,now:clock.now()});const after=gate({...context,phase:'after_execute',now:clock.now(),result});if(after.decision!=='allow')throw Error(after.reason);const next=clone(getState());if(next.companion.recipient?.id===r.id){next.companion.recipient.status='done';next.companion.recipient.receipt=result.receipt_id;next.recipientHistory??=[];if(!next.recipientHistory.some(x=>x.cardNumber===r.input.cardNumber))next.recipientHistory.push({cardNumber:r.input.cardNumber,recipientName:r.input.recipientName});save(next);append('转账成功',{kind:'execution_receipt',evidence:{status:'completed',receipt:result.receipt_id}});}}catch(error){const next=clone(getState());if(next.companion.recipient?.id===r.id&&next.companion.recipient.status==='running'){next.companion.recipient.status='review';save(next);}throw error;}}
+ function renderRecipient(){
+  const r=getState().companion.recipient;if(!r)return '';
+  if(r.status==='done')return `<section class="card companion-inline"><div class="row between"><h3>${e(r.review.target)}</h3><span class="companion-risk companion-risk-green">已完成</span></div><div class="plan-row"><span>转账成功</span><strong>${money(r.review.amountMinor)}</strong></div></section>`;
+  if(r.status==='details')return `<section class="card companion-inline"><h3>核对收款信息</h3><form id="companion-recipient-form"><input type="hidden" name="reference" value="${e(r.input.reference||'')}"><label>收款人<input name="recipientName" value="${e(r.input.recipientName||'')}" required></label><label>收款卡号<input name="cardNumber" inputmode="numeric" pattern="[0-9]{16}" maxlength="16" value="${e(r.input.cardNumber||'')}" required></label><label>金额（元）<input name="amount" type="number" min="0.01" step="0.01" value="${r.input.amountMinor?r.input.amountMinor/100:''}" required></label><label>付款账户<select name="sourceAccount" required><option value="living_1608">生活账户 1608</option></select></label><button class="primary full" type="submit">核对信息</button><button class="quiet full" data-action="recipient-cancel" type="button">取消</button></form></section>`;
+  const op=recipientOperation(r.review,{id:r.id,revision:r.revision,expiresAt:r.expiresAt,history:getState().recipientHistory||[]}),classification=policy.classifyOperation(getState(),op,{now:now()});
+  return `<section class="card companion-inline"><div class="row between"><h3>${e(op.target)}</h3>${riskBadge(classification,{esc:e})}</div><div class="plan-row"><span>转账金额</span><strong>${money(op.amountMinor)}</strong></div><p class="companion-card-meta">${e(r.review.status==='matched'?(r.review.evidence.first_transfer?'首次向这张卡转账，请核对。':'已向这张卡转账过，请核对本次金额。'):r.review.status==='reported'?'这张卡有多条风险举报，不能继续转账。':'收款信息尚未核实，请先确认卡号。')}</p>${r.review.status==='matched'&&r.status==='review'?'<button class="primary full" data-action="recipient-confirm">确认这一次转账</button>':''}${r.status==='running'?'<p role="status">正在处理…</p>':'<button class="quiet full" data-action="recipient-edit">修改信息</button><button class="quiet full" data-action="recipient-cancel">取消</button>'}</section>`;
+ }
+ function compoundLabel(path,fields){const match=/^items\.([0-5])\.([a-z_]+)$/.exec(path);if(!match)return path;return ({sms:'短信',cake:'蛋糕',ride:'顺风车'}[fields.items[Number(match[1])].kind])+({contact_id:'收件人',message:'内容',product_id:'品类',date:'日期',pickup_time:'自取时间',fulfillment:'领取方式',source_account:'付款账户',budget_minor:'预算',departure_time:'出发时间',origin:'出发地',destination:'目的地',fare_minor:'车费上限'}[match[2]]||'');}
+ function readModelForm(form){const patch=Object.fromEntries(new FormData(form));for(const [key,value] of Object.entries(patch)){if(key.endsWith('_minor'))patch[key]=value===''?null:Math.round(Number(value)*100);else if(value==='')patch[key]=null;}return patch;}
  function rememberForm(form){try{rememberModelFields(readModelForm(form));}catch{/* Keep in-progress native input until its value is valid. */}}
  function renderCompoundDraft(d){
   if(!d.fields.items?.length)return '';
   const paths=d.editFields||d.missing,options={contact_id:fixtures.contacts.filter(c=>['mom','dad','partner-linxia','cake-owner'].includes(c.id)).map(c=>[c.id,c.name+' '+c.phone]),product_id:[['demo-cake-01','六寸草莓蛋糕 ¥188']],fulfillment:[['pickup','到店自取']],source_account:[['living_1608','生活账户1608']]};
-  const fields=d.fields.items.map((item,index)=>{const keys=paths.filter(path=>path.startsWith('items.'+index+'.'));if(!keys.length)return '';return `<fieldset class="compound-fields"><legend>${item.kind==='sms'?'短信':'蛋糕'}</legend>${keys.map(path=>{const key=path.split('.')[2],value=item[key],label=compoundLabel(path,d.fields);const control=options[key]?`<select name="${path}" required><option value="">请选择</option>${options[key].map(([v,t])=>`<option value="${e(v)}" ${value===v?'selected':''}>${e(t)}</option>`).join('')}</select>`:key==='message'?`<textarea name="${path}" rows="3" maxlength="240" required>${e(value||'')}</textarea>`:`<input name="${path}" type="${key==='date'?'date':key==='pickup_time'?'time':key==='budget_minor'?'number':'text'}" value="${e(key==='budget_minor'&&value?value/100:value||'')}" ${key==='budget_minor'?'min="188" step="0.01"':''} required>`;return `<label>${e(label)}${control}</label>`;}).join('')}</fieldset>`;}).join('');
+  const fields=d.fields.items.map((item,index)=>{const keys=paths.filter(path=>path.startsWith('items.'+index+'.'));if(!keys.length)return '';return `<fieldset class="compound-fields"><legend>${({sms:'短信',cake:'蛋糕',ride:'顺风车'}[item.kind])}</legend>${keys.map(path=>{const key=path.split('.')[2],value=item[key],label=compoundLabel(path,d.fields);const control=options[key]?`<select name="${path}" required><option value="">请选择</option>${options[key].map(([v,t])=>`<option value="${e(v)}" ${value===v?'selected':''}>${e(t)}</option>`).join('')}</select>`:key==='message'?`<textarea name="${path}" rows="3" maxlength="240" required>${e(value||'')}</textarea>`:`<input name="${path}" type="${key==='date'?'date':['pickup_time','departure_time'].includes(key)?'time':['budget_minor','fare_minor'].includes(key)?'number':'text'}" value="${e(['budget_minor','fare_minor'].includes(key)&&value?value/100:value||'')}" ${key==='budget_minor'?'min="188" step="0.01"':key==='fare_minor'?'min="0.01" max="2000" step="0.01"':''} required>`;return `<label>${e(label)}${control}</label>`;}).join('')}</fieldset>`;}).join('');
   return `<section class="card companion-inline"><form id="companion-model-form">${fields}<button class="primary full" type="submit">继续核对</button><button class="quiet full" type="button" data-action="model-cancel">取消这次安排</button></form></section>`;
  }
  function renderModelDraft(d=getState().companion.modelDraft){
  if(!d)return '';
   if(d.scenario==='compound')return renderCompoundDraft(d);
-  const names={birthday_date:'生日日期',budget_minor:'预算（元）',amount_minor:'转账金额（元）',recipient_name:'收款人',recipient_reference:'收款记录',partner_id:'生日对象',city:'城市',source_account:'付款账户',subscription_action:'本次选择'};
+  const names={birthday_date:'生日日期',budget_minor:'预算（元）',amount_minor:'转账金额（元）',recipient_name:'收款人',recipient_reference:'收款记录',recipient_card_number:'完整收款卡号',partner_id:'生日对象',city:'城市',source_account:'付款账户',subscription_action:'本次选择'};
   const options={partner_id:[['partner-linxia','林夏']],source_account:[['living_1608','生活账户 1608']],subscription_action:[['keep','只续本期 25元'],['cancel','取消下次续费']]};
   return `<section class="card companion-inline"><form id="companion-model-form">${d.missing.map(k=>`<label>${e(names[k]||k)}${options[k]?`<select name="${k}" required><option value="">请选择</option>${options[k].map(([v,t])=>`<option value="${v}" ${d.fields[k]===v?'selected':''}>${t}</option>`).join('')}</select>`:`<input name="${k}" type="${k==='birthday_date'?'date':['budget_minor','amount_minor'].includes(k)?'number':'text'}" value="${e(['budget_minor','amount_minor'].includes(k)&&d.fields[k]?d.fields[k]/100:d.fields[k]||'')}" ${['budget_minor','amount_minor'].includes(k)?'min="0.01" step="0.01"':''} required>`}</label>`).join('')}<button class="primary full" type="submit">继续</button><button class="quiet full" type="button" data-action="model-cancel">取消这次安排</button></form></section>`;
  }
- function renderSecurityNotice(){const n=getState().companion.securityNotice;
+ function renderSecurityNotice(){const n=getState().companion.securityNotice;if(n?.caseId==='safe_external_content')return '';
   if(n?.stage){
    if(n.stage==='verify'&&activeChallenge?.sourceReview)return '';
    const mail=n.caseId==='prompt_injection_email',cancelled=n.stage==='cancelled';
@@ -316,20 +366,38 @@ export function createCompanionController(host){
   const cash=plan.steps.filter(n=>n.status==='succeeded'&&n.receipt_id&&['pay_deposit','transfer','pay_rent','renew_subscription'].includes(n.operation)).reduce((sum,n)=>sum+(n.payload.amount_minor||0),0);
   return renderStepPlan(plan,{esc:e,money,node,operation:op,classification:op?stepClassification(plan,node):null,contacts:fixtures.contacts,paused:!!getState().companion.pausedPlans[plan.id],running:runningPlans.has(plan.id),verifying:!!activeChallenge,granted:!!grant,locked:getState().safety.locked||getState().paused,now:now(),formatTime:displayTime,details,paymentSummary:cash?'累计支出 '+money(cash):'',feedback:feedback?.planId===plan.id?feedback.node:null});
  }
- function pendingCount(){return manager.snapshot().plans.filter(p=>!['succeeded','cancelled'].includes(p.status)).length;}
+ function pendingCount(){return (getState().savingsCoach&&!['done','cancelled'].includes(getState().savingsCoach.stage)?1:0)+manager.snapshot().plans.filter(p=>!['succeeded','cancelled'].includes(p.status)).length;}
  function renderQueue(){const plans=manager.snapshot().plans;if(!plans.length)return '';return `<section class="card companion-plan"><h3>我的安排</h3>${plans.map(plan=>`<button class="companion-queue-row" data-action="plan-open" data-plan="${e(plan.id)}"><span>${e(plan.title)}</span><small>${e(labels[plan.status]||'待核对')}</small></button>`).join('')}</section>`;}
- function render(){const state=getState();const banner=()=>state.companion.securityNotice?.stage?'':renderSafetyBanner({...state.safety,reason:state.safety.lock?.reason},{esc:e});if(awaitingModel)return banner()+renderSecurityNotice();const challenge=activeChallenge&&policy.getSafetyChallenge(state,activeChallenge.id);const current=!!state.companion.paper||!!activePlan()||!!state.companion.modelDraft||!!state.companion.recipient||!!state.companion.securityNotice||!!challenge;return banner()+(current?sourceReturn()+(voiceView.listening&&voiceView.armed?`<p class="companion-card-meta">语音确认：${e(voiceView.armed.phrase)}</p>`:'')+renderPaper()+renderModelDraft()+renderRecipient()+renderSecurityNotice()+renderPlan()+(challenge?renderChallenge(challenge,{esc:e,recovery:activeChallenge.recovery,review:activeChallenge.sourceReview}):''):'');}
+ function render(){const state=getState();if(state.safety.locked&&state.safety.lock?.expiresAt)return renderSafetyBanner(state.safety,{esc:e});const banner=()=>state.companion.securityNotice?.stage?'':renderSafetyBanner({...state.safety,reason:state.safety.lock?.reason},{esc:e});if(awaitingModel)return banner()+renderSecurityNotice();const challenge=activeChallenge&&policy.getSafetyChallenge(state,activeChallenge.id);const current=!!state.savingsCoach||!!state.companion.paper||!!activePlan()||!!state.companion.modelDraft||!!state.companion.recipient||!!state.companion.securityNotice||!!challenge;return banner()+(current?sourceReturn()+(voiceView.listening&&voiceView.armed?`<p class="companion-card-meta">语音确认：${e(voiceView.armed.phrase)}</p>`:'')+(state.savingsCoach?.stage==='proposal'&&state.savingsCoach.editing?savings.renderSavingsAdjustment(state,{esc:e}):(['done','cancelled'].includes(state.savingsCoach?.stage)?'':savings.renderSavingsCoach(state,{esc:e})))+renderPaper()+renderModelDraft()+renderRecipient()+renderSecurityNotice()+renderPlan()+(challenge?renderChallenge(challenge,{esc:e,recovery:activeChallenge.recovery,review:activeChallenge.sourceReview}):''):'');}
  function renderVoice(){const recording=voiceView.listening;return `<button type="button" id="bot-voice-controls" class="mic ${recording?'recording':''}" data-action="voice-toggle" aria-label="${recording?'停止收音':'开始收音'}" aria-pressed="${recording}"><svg viewBox="0 0 24 24" aria-hidden="true">${recording?'<rect x="7" y="7" width="10" height="10" rx="2"/>':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3m-4 0h8"/>'}</svg></button>`;}
  async function stopVoiceInput({cancel=false}={}){const text=voiceView.buffer.join(' ')||voiceView.interim,pending=voiceView.confirmationRequest;voiceView.buffer=[];voiceView.interim='';voiceView.confirmationRequest=null;voice.stopListening();voice.cancel();voiceView.armed=null;voiceView.listening=false;host.repaint?.();if(cancel)return;if(pending)return handleVoiceConfirmation(pending);if(text)host.onVoiceText?.(text,{interim:false});}
  function clearVoiceInput(){voiceView.buffer=[];voiceView.interim='';voiceView.confirmationRequest=null;voiceView.armed=null;voiceView.listening=false;voice?.stopListening();voice?.cancel();}
  async function handleSubmit(event){
   const form=event.target;
+  if(form.id==='savings-budget-form'){
+   event.preventDefault?.();const n=clone(getState()),c=n.savingsCoach;
+   try{if(Number(form.dataset.revision)!==c?.revision)throw Error('预算已更新，请重新核对');const patch=readModelForm(form),op=savings.editedBudgetOperation(n,c,patch);savings.applyEditedBudget(n,c,patch,{permit:savingsPermit(n,op),now:now()});}catch(error){if(c)c.error=error.message;}
+   save(n);return true;
+  }
+  if(form.id==='savings-jar-form'){
+   event.preventDefault?.();const n=clone(getState());
+   try{if(Number(form.dataset.revision)!==n.savingsEditor?.revision)throw Error('计划已更新，请重新核对。');savings.updateJarEditor(n,readModelForm(form));savings.refreshSavingsStart(n,n.savingsEditor,{now:now()});savings.savingsPlanOperation(n,n.savingsEditor,{now:now()});}
+   catch(error){if(n.savingsEditor)n.savingsEditor.error=error.message;}save(n);return true;
+  }
+  if(['savings-adjust-form','savings-fields-form'].includes(form.id)){
+   event.preventDefault?.();const n=clone(getState()),c=n.savingsCoach;if(!c)throw Error('这份安排已结束。');
+   if(form.dataset.revision&&Number(form.dataset.revision)!==c.revision)throw Error('安排已更新，请重新核对。');
+   const patch=readModelForm(form);
+   if(form.id==='savings-adjust-form')savings.reviseSavingsProposal(n,c,{reduction_minor:patch.reduction_minor});
+   else {n.savingsCoach=savings.updateSavingsFields(c,patch);savings.refreshSavingsStart(n,n.savingsCoach,{now:now()});}
+   n.savingsCoach.editing=false;save(n);host.onInlineUpdated?.();return true;
+  }
   if(form.id==='companion-model-form'||form.id==='companion-plan-form'){
-   const patch=readModelForm(form);const d=getState().companion.modelDraft||activePlan();rememberModelFields(patch);const names={birthday_date:'生日日期',budget_minor:'预算',partner_id:'生日对象',city:'城市',source_account:'付款账户',subscription_action:'本次选择'};const display=(k,v)=>k.endsWith('budget_minor')?money(v):v==='living_1608'?'生活账户1608':v==='partner-linxia'?'林夏':v==='keep'?'只续本期':v==='cancel'?'取消下次续费':fixtures.contacts.find(c=>c.id===v)?.name||v;await host.onSend?.('本次补充：'+Object.entries(patch).map(([k,v])=>(d?.scenario==='compound'?compoundLabel(k,d.fields):names[k]||k)+'：'+display(k,v)).join('，'),{companionClarification:true});return true;
+   const patch=readModelForm(form);const d=getState().companion.modelDraft||activePlan();rememberModelFields(patch);const names={birthday_date:'生日日期',budget_minor:'预算',partner_id:'生日对象',city:'城市',source_account:'付款账户',subscription_action:'本次选择'};const display=(k,v)=>k.endsWith('_minor')?money(v):v==='living_1608'?'生活账户1608':v==='partner-linxia'?'林夏':v==='keep'?'只续本期':v==='cancel'?'取消下次续费':fixtures.contacts.find(c=>c.id===v)?.name||v;await host.onSend?.('本次补充：'+Object.entries(patch).map(([k,v])=>(d?.scenario==='compound'?compoundLabel(k,d.fields):names[k]||k)+'：'+display(k,v)).join('，'),{companionClarification:true});return true;
   }
   if(form.id==='companion-recipient-form'){
    const fields=Object.fromEntries(new FormData(form)),next=clone(getState()),r=next.companion.recipient;if(!r)throw Error('本次核对已结束。');
-   if(r.review)policy.revokeOperation(next,r.id,{reason:'parameters_changed',now:now()});bridge.invalidate();r.revision++;r.input={reference:fields.reference,recipientName:fields.recipientName,purpose:fields.purpose,amountMinor:Math.round(Number(fields.amount)*100),sourceAccount:fields.sourceAccount};r.review=reviewRecipient(r.input);r.expiresAt=now()+300000;r.status='review';ensureWindow(next,r.id);save(next);return true;
+   if(r.review)policy.revokeOperation(next,r.id,{reason:'parameters_changed',now:now()});bridge.invalidate();r.revision++;r.input={reference:fields.reference,recipientName:fields.recipientName,purpose:fields.purpose||'转账',cardNumber:fields.cardNumber,amountMinor:Math.round(Number(fields.amount)*100),sourceAccount:fields.sourceAccount};r.review=reviewRecipient(r.input,{history:next.recipientHistory||[]});r.expiresAt=now()+300000;r.status=r.review.missing.length?'details':'review';ensureWindow(next,r.id);save(next);return true;
   }
   if(form.id==='companion-paper-form'){
    const next=clone(getState()),p=next.companion.paper,fields=Object.fromEntries(new FormData(form));
@@ -356,6 +424,49 @@ export function createCompanionController(host){
   return false;
  }
  async function handleAction(action,button,event){
+  if(action.startsWith('savings-')){
+   const n=clone(getState()),c=n.savingsCoach;
+   const jarId=button?.dataset?.jarId;
+   if(action.startsWith('savings-editor-')||action.startsWith('savings-jar-')){
+    try{
+     if(action==='savings-jar-new')savings.beginJarEditor(n,{now:now()});
+     else if(['savings-jar-adjust','savings-jar-resume'].includes(action))savings.beginJarEditor(n,{jarId,now:now(),resume:action==='savings-jar-resume'});
+     else if(action==='savings-editor-close')n.savingsEditor=null;
+     else if(action==='savings-editor-edit'){n.savingsEditor.stage='details';n.savingsEditor.revision++;}
+     else if(action==='savings-editor-save'){
+      const editor=n.savingsEditor;if(!editor)return true;
+      if(Number(button?.dataset?.revision)!==editor.revision)throw Error('计划已更新，请重新核对。');
+      if(!savings.refreshSavingsStart(n,editor,{now:now()})){const op=savings.savingsPlanOperation(n,editor,{now:now()});const jar=savings.applySavingsPlan(n,editor,{permit:savingsPermit(n,op),now:now()});syncJarReceipt(n,jar);}
+     }else if(action==='savings-jar-pause')savings.pauseSavingsPlan(n,{source:USER,jarId});
+     else if(action==='savings-jar-cancel')n.savingsCancelId=jarId;
+     else if(action==='savings-jar-cancel-dismiss')n.savingsCancelId=null;
+     else if(action==='savings-jar-cancel-confirm'){if(n.savingsCancelId!==jarId)throw Error('请先核对要取消的储蓄罐。');const jar=savings.cancelJarPlan(n,jarId,{source:USER});n.savingsCancelId=null;syncJarReceipt(n,jar);}
+     else if(action==='savings-jar-archive')n.savingsArchiveId=jarId;
+     else if(action==='savings-jar-archive-dismiss')n.savingsArchiveId=null;
+     else if(action==='savings-jar-archive-confirm'){if(n.savingsArchiveId!==jarId)throw Error('请先核对要移除的储蓄罐');savings.archiveEmptyJar(n,jarId,{source:USER,now:now()});n.savingsArchiveId=null;}
+     else if(action==='savings-jar-restore')savings.restoreArchivedJar(n,jarId,{source:USER});
+     else return false;
+    }catch(error){if(n.savingsEditor)n.savingsEditor.error=error.message;else throw error;}
+    save(n);return true;
+   }
+   if(button?.dataset?.revision&&Number(button.dataset.revision)!==c?.revision)throw Error('安排已更新，请重新核对。');
+   if(action==='savings-cancel'){finishSavings(true);return true;}
+   if(action==='savings-allocation-edit'){c.editingAllocation=true;c.error=null;save(n);return true;}
+   if(action==='savings-allocation-cancel'){c.editingAllocation=false;save(n);return true;}
+   if(action==='savings-use-existing'){savings.useExistingTravelBudget(n,c,{now:now()});save(n);append('已用现有旅行预算拟好储蓄计划，预算没有再次调整。',{planId:c.id});host.onInlineUpdated?.();return true;}
+   if(action==='savings-adjust-budget'){c.editing=true;save(n);return true;}
+   if(action==='savings-edit-fields'){c.stage='details';c.revision++;save(n);return true;}
+   if(action==='savings-accept-budget'){
+    const op=savings.budgetOperation(n,c);savings.applyBudgetTransfer(n,c,{permit:savingsPermit(n,op),now:now()});save(n);
+    append('旅行预算已增加 '+money(c.reduction_minor)+'。储蓄计划也拟好了，确认后按计划存入。',{planId:c.id});host.onInlineUpdated?.();return true;
+   }
+   if(action==='savings-confirm-plan'){
+    if(!c||c.stage==='done')return true;
+    try{if(savings.refreshSavingsStart(n,c,{now:now()})){save(n);return true;}const op=savings.savingsPlanOperation(n,c,{now:now()});savings.applySavingsPlan(n,c,{permit:savingsPermit(n,op),now:now()});save(n,{paint:false});finishSavings();host.onInlineUpdated?.();}
+    catch(error){n.savingsCoach.error=error.message;save(n);}return true;
+   }
+   return false;
+  }
   if(action==='source-review-verify'){
    if(awaitingModel)throw Error('正在核对这条内容，请稍候。');
    const next=clone(getState()),notice=next.companion.securityNotice;
@@ -415,7 +526,7 @@ export function createCompanionController(host){
   return false;
  }
  function unusedLegacyVoiceChange(event){if(event.target.id==='companion-voice-engine'){ttsKind=event.target.value==='browser'?'browser':'local';makeVoice();voice.enable({userGesture:!!event.isTrusted});voiceView.text=ttsKind==='local'?'本地声音已选择':'系统声音已选择';host.repaint?.();return true;}if(event.target.id==='companion-voice-identity'){voiceView.identity=event.target.value;voice.setIdentitySignal(voiceView.identity);return true;}return false;}
- return {renderReplay:id=>id===replayMessageId?`<button class="quiet" data-action="voice-replay">${['preparing','speaking'].includes(voice.getState().speech)?'停止播放':'重听'}</button>`:'',prepareReplyVoice,resetVoiceConnection:()=>{clearVoiceInput();makeVoice();},cancelSpeech:()=>voice.cancel(),render,renderVoice,renderQueue,pendingCount,handleAction,handleSubmit,handleChange:()=>false,stopVoiceInput,clearVoiceInput,voiceState:()=>voice.getState(),handleText,advanceDemoClock,currentStep:()=>nextPlanStep(activePlan()),setPending:value=>{awaitingModel=!!value;if(!value&&(activePlan()||getState().companion.modelDraft))host.onInlineUpdated?.();},modelContext,applyModelResult,rememberModelFields,rememberForm,hidePresentation,registerPaper,getConfirmationSnapshot,activeSnapshot,append,sync,now,clock,manager,fixtures,recordSignal,resetView,armActive,
+ return {renderReplay:id=>id===replayMessageId?`<button class="quiet" data-action="voice-replay">${['preparing','speaking'].includes(voice.getState().speech)?'停止播放':'重听'}</button>`:'',prepareReplyVoice,resetVoiceConnection:()=>{clearVoiceInput();makeVoice();},cancelSpeech:()=>voice.cancel(),render,renderVoice,renderQueue,pendingCount,handleAction,handleSubmit,handleChange:()=>false,stopVoiceInput,clearVoiceInput,voiceState:()=>voice.getState(),handleText,resetConversation,advanceDemoClock,currentStep:()=>nextPlanStep(activePlan()),setPending:value=>{awaitingModel=!!value;if(!value&&(activePlan()||getState().companion.modelDraft))host.onInlineUpdated?.();},modelContext,applyModelResult,rememberModelFields,rememberForm,hidePresentation,registerPaper,getConfirmationSnapshot,activeSnapshot,append,sync,savingsTick,now,clock,manager,fixtures,recordSignal,resetView,armActive,
   adoptSnapshot,inspectExternalSource,notifyEnvelope(envelope,{messageId}={}){replayMessageId=envelope.speak?messageId:null;lastSpoken=envelope;Promise.resolve(voice.speak(envelope,{messageId})).then(()=>armActive()).catch(()=>{});},
   dispose(){disposed=true;clearTimeout(feedbackTimer);voice.dispose();bridge.invalidate();}};
 }

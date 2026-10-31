@@ -1,7 +1,7 @@
-// Bounded data slots for local SMS/cake proposals. No authority or execution.
-export const COMPOUND_ITEM_FIELDS=Object.freeze({sms:Object.freeze(['contact_id','message']),cake:Object.freeze(['product_id','date','pickup_time','fulfillment','source_account','budget_minor'])});
+// Bounded data slots for local SMS/cake/ride proposals. No authority or execution.
+export const COMPOUND_ITEM_FIELDS=Object.freeze({sms:Object.freeze(['contact_id','message']),cake:Object.freeze(['product_id','date','pickup_time','fulfillment','source_account','budget_minor']),ride:Object.freeze(['date','departure_time','origin','destination','fare_minor','source_account'])});
 const CONTACTS=new Set(['mom','dad','partner-linxia','cake-owner']);
-const REQUIRED={sms:['contact_id','message'],cake:['product_id','date','pickup_time','fulfillment','source_account']};
+const REQUIRED={sms:['contact_id','message'],cake:['product_id','date','pickup_time','fulfillment','source_account'],ride:['date','departure_time','origin','destination','fare_minor','source_account']};
 const invalid=()=>{const error=Error('复合安排信息无效，请保留每一项并重新核对。');error.code='invalid_compound_fields';throw error;};
 const plain=x=>!!x&&typeof x==='object'&&(Object.getPrototypeOf(x)===Object.prototype||Object.getPrototypeOf(x)===null);
 function record(x,keys){if(!plain(x))invalid();for(const k of Reflect.ownKeys(x)){if(typeof k!=='string'||!keys.includes(k)||!Object.hasOwn(Object.getOwnPropertyDescriptor(x,k),'value'))invalid();}return x;}
@@ -11,7 +11,9 @@ function value(k,v){
  if(k==='message'){if(typeof v!=='string'||!v.trim()||v.length>240||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f<>]/.test(v))invalid();return v.trim();}
  if(k==='product_id'){if(v!=='demo-cake-01')invalid();return v;}
  if(k==='date'){if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v)||v.startsWith('0000-')||!Number.isFinite(Date.parse(v+'T00:00:00Z'))||new Date(v+'T00:00:00Z').toISOString().slice(0,10)!==v)invalid();return v;}
- if(k==='pickup_time'){if(typeof v!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(v))invalid();return v;}
+ if(k==='pickup_time'||k==='departure_time'){if(typeof v!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(v))invalid();return v;}
+ if(k==='origin'||k==='destination'){if(typeof v!=='string'||!v.trim()||v.length>80||/[\u0000-\u001f\u007f<>]/.test(v))invalid();return v.trim();}
+ if(k==='fare_minor'){if(!Number.isSafeInteger(v)||v<1||v>200000)invalid();return v;}
  if(k==='fulfillment'){if(v!=='pickup')invalid();return v;}
  if(k==='source_account'){if(v!=='living_1608')invalid();return v;}
  if(k==='budget_minor'){if(!Number.isSafeInteger(v)||v<1||v>2000000)invalid();return v;}
@@ -21,7 +23,7 @@ export function validateCompoundFields(fields){
  record(fields,['items']);if(!Object.hasOwn(fields,'items'))return {};
  if(!Array.isArray(fields.items)||fields.items.length<1||fields.items.length>6)invalid();
  const ids=new Set();const items=fields.items.map(item=>{
-  if(!plain(item)||!['sms','cake'].includes(item.kind)||typeof item.id!=='string'||!/^item-[1-6]$/.test(item.id)||ids.has(item.id))invalid();ids.add(item.id);
+  if(!plain(item)||!['sms','cake','ride'].includes(item.kind)||typeof item.id!=='string'||!/^item-[1-6]$/.test(item.id)||ids.has(item.id))invalid();ids.add(item.id);
   record(item,['id','kind',...COMPOUND_ITEM_FIELDS[item.kind]]);
   return Object.fromEntries(Object.entries(item).map(([k,v])=>[k,['id','kind'].includes(k)?v:value(k,v)]));
  });return {items};

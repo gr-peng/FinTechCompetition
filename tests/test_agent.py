@@ -18,9 +18,9 @@ class AgentTests(unittest.TestCase):
         return conn,lambda *args,**kwargs:conn
 
     def test_structured_call_is_real_provider_path_with_only_current_run_context(self):
-        envelope={'model':'deepseek-v4-flash-0731','usage':{'prompt_tokens':100,'completion_tokens':40,'total_tokens':140},'choices':[{'message':{'content':json.dumps(PLAN,ensure_ascii=False)},'finish_reason':'stop'}]}
+        envelope={'model':'deepseek-flash','usage':{'prompt_tokens':100,'completion_tokens':40,'total_tokens':140},'choices':[{'message':{'content':json.dumps(PLAN,ensure_ascii=False)},'finish_reason':'stop'}]}
         conn,factory=self.provider(envelope)
-        result,meta=run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        result,meta=run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
         self.assertEqual(result['query'],'dining_month');self.assertTrue(meta['completed']);self.assertEqual(meta['usage']['total_tokens'],140)
         args=conn.request.call_args.args;self.assertEqual(args[:2],('POST','/v1/chat/completions'))
         body=json.loads(args[2]);self.assertFalse(body['stream']);self.assertNotIn('preferences',body['messages'][-1]['content']);self.assertIsNone(meta['cost'])
@@ -41,23 +41,23 @@ class AgentTests(unittest.TestCase):
 
     def test_provider_401_and_timeout_are_explicit_without_fallback(self):
         conn,factory=self.provider({'error':{'message':KEY}},401)
-        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
         self.assertEqual(raised.exception.code,'invalid_key');self.assertNotIn(KEY,str(raised.exception))
         conn.request.side_effect=TimeoutError()
-        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
         self.assertEqual(raised.exception.status,504)
 
     def test_length_and_bad_json_never_become_success(self):
         for content,reason in [('bad-json','stop'),(json.dumps(PLAN),'length')]:
             conn,factory=self.provider({'choices':[{'message':{'content':content},'finish_reason':reason}]})
-            with self.assertRaises(ProviderError):run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+            with self.assertRaises(ProviderError):run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
 
     def test_existing_card_entry_has_valid_clarification_and_schema_errors_are_safe(self):
         plan={**PLAN,'status':'clarify','scenario':'card_review','query':None,'missing':['transaction_ref']}
         self.assertEqual(validate_result(plan)['missing'],['transaction_ref'])
         invalid={**plan,'scenario':'card','reply':KEY}
         conn,factory=self.provider({'choices':[{'finish_reason':'stop','message':{'content':json.dumps(invalid)}}]})
-        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        with self.assertRaises(ProviderError) as raised:run_provider(PAYLOAD,KEY,'deepseek-flash','unit-test',factory)
         meta=raised.exception.diagnostic
         self.assertEqual(meta['protocol_stage'],'contract');self.assertEqual(meta['schema_error'],'invalid planner shape')
         self.assertNotIn(KEY,json.dumps(meta));self.assertFalse(meta['completed'])
@@ -65,7 +65,7 @@ class AgentTests(unittest.TestCase):
     def test_greeting_is_real_model_conversation_even_with_pending_draft(self):
         greeting={**PLAN,'scenario':'other','reply':'你好，有什么我可以帮你？','query':None}
         conn,factory=self.provider({'choices':[{'finish_reason':'stop','message':{'content':json.dumps(greeting)}}]})
-        result,meta=run_provider({**PAYLOAD,'text':'hi','run_draft':{'id':'test-draft','fields':{},'missing':['purpose','amount_minor']}},KEY,'deepseek-v4-flash-0731','unit-test',factory)
+        result,meta=run_provider({**PAYLOAD,'text':'hi','run_draft':{'id':'test-draft','fields':{},'missing':['purpose','amount_minor']}},KEY,'deepseek-flash','unit-test',factory)
         self.assertEqual(result['scenario'],'other');self.assertIsNone(result['query']);self.assertTrue(meta['completed'])
         self.assertEqual(conn.request.call_count,1)
         with self.assertRaises(ContractError):validate_result({**greeting,'status':'clarify'})
