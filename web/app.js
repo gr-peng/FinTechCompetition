@@ -118,11 +118,13 @@ async function send(text,options={}){
  lastUser=text;streamError='';streamText='';const originId=options.originTurnId||crypto.randomUUID();lastOriginId=originId;
  if(!options.programEvent&&!state.messages.some(m=>m.id===originId))state.messages.push({id:originId,role:'user',text:text.slice(0,2000)});
  state.agentWorkspaceVisible=!!options.clarification;save();busy=true;streamEntranceId++;const ticket=requests.begin(),controller=ticket.controller;aborter=controller;const deadline=createAgentDeadline(controller,{onSlow:()=>{if(requests.valid(ticket)&&busy){streamText='模型仍在回复，可停止等待。';render();}}});render();
+ // The showcase frame passes JSON so objects keep this realm's prototypes for the plain-object checks.
+ const replay=JSON.parse(window.finpilotReplay?.(text)??'null');
  try{
   const connection=await deadline.wait(()=>apiInit({paint:false}));
   if(!requests.valid(ticket))throw new DOMException('Aborted','AbortError');
-  if(!modelConnectionState(connection).canConfigure)throw Error(modelConnectionState(connection).message+'这条消息未调用模型。');
-  if(!connection.configured)throw Error('尚未连接真实模型。请到“我的 → 模型与连接”填写本次连接；这条消息未调用模型。');
+  if(!replay&&!modelConnectionState(connection).canConfigure)throw Error(modelConnectionState(connection).message+'这条消息未调用模型。');
+  if(!replay&&!connection.configured)throw Error('尚未连接真实模型。请到“我的 → 模型与连接”填写本次连接；这条消息未调用模型。');
   const focus=state.tasks.find(t=>t.id===state.agentFocus&&t.agentRunId===currentAgentRun&&!['done','cancelled','blocked'].includes(t.status));
   const active=focus?{id:focus.id,kind:focus.kind,fields:{amount_minor:Math.round(focus.amount*100),payee_id:focus.payeeId||null,source_account:focus.sourceAccount||null,currency:focus.currency||'CNY',scheduled_date:focus.scheduledDate||null,purpose:focus.purpose||null,subscription_id:focus.subscriptionId||null,subscription_action:focus.subscriptionAction||null,transaction_ref:focus.transactionRef||null}}:null;
   const draft=state.agentDraft?.agentRunId===currentAgentRun?{id:state.agentDraft.id,fields:state.agentDraft.fields,missing:state.agentDraft.missing,choice_order:['family','travel','cash']}:null;
@@ -130,7 +132,8 @@ async function send(text,options={}){
   if(!requests.valid(ticket))throw new DOMException('Aborted','AbortError');
   const request={validation_scope:'finpilot-fifteen-v1',text,tool_catalog:QUESTION_CATALOG.filter(q=>availableQueries.has(q.id)).map(q=>q.id),run_history:validationHistory.slice(-8),run_draft:draft,run_active_task:active,clarification:options.clarification||null,...(companionRuntime?.modelContext()?{run_companion:companionRuntime.modelContext()}:{}),...((options.runEvent||state.companion?.pendingEvent)?{run_event:options.runEvent||state.companion.pendingEvent}:{})};
   // No state.messages, preferences, tool facts, ledger or positions in request.
-  const res=await deadline.wait(()=>fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(request),signal:controller.signal}));
+  if(replay)await deadline.wait(()=>new Promise(resolve=>setTimeout(resolve,1800)));
+  const res=replay?{ok:true,json:async()=>({result:replay,source:'llm',provider:{completed:true}})}:await deadline.wait(()=>fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(request),signal:controller.signal}));
   const data=await deadline.wait(()=>res.json());if(!res.ok)throw Error(data.message||'模型连接暂不可用，未创建新任务。');
   if(!requests.valid(ticket))throw new DOMException('Aborted','AbortError');
   if(data.source!=='llm'||!data.provider?.completed)throw Error('没有取得完整、可验证的模型结果。');
