@@ -1,3 +1,4 @@
+import {MAX_AMOUNT_MINOR,MAX_AMOUNT_YUAN} from './limits.mjs';
 import {budgetReceiptFacts} from './budget-result.mjs';
 import {CONTACTS,SOURCES,parameterFingerprint} from './task-parameters.mjs';
 import {SUBSCRIPTIONS} from './agent-tools.mjs';
@@ -5,7 +6,7 @@ export const fieldLabels={amount_minor:'金额',payee_id:'收款人',source_acco
 const options={transaction_ref:[['unrecognized_1299','生活账户1608 陌生交易 ¥1,299.00']],purpose:[['family','转给家人'],['travel','旅行安排'],['cash','灵活储蓄']],payee_id:CONTACTS.map(c=>[c.id,c.name+' 尾号 '+c.suffix]),source_account:SOURCES.map(a=>[a.id,a.name+' '+a.suffix]),subscription_id:SUBSCRIPTIONS.map(s=>[s.id,s.name]),subscription_action:[['cancel','取消下次续费'],['keep','保留当前套餐'],['downgrade','下次改标准套餐']],cadence:[['once','只安排这次'],['monthly','每月提醒确认']]};
 export function clarificationFields(draft,esc){return draft.missing.map(key=>{
  const value=draft.fields[key];
- if(key==='amount_minor')return `<label>金额（元）<input name="amount_minor" type="number" inputmode="decimal" min="0.01" max="20000" step="0.01" value="${esc(draft.uiValues?.[key]??(value?value/100:''))}" required></label>`;
+ if(key==='amount_minor')return `<label>金额（元）<input name="amount_minor" type="number" inputmode="decimal" min="0.01" max="${MAX_AMOUNT_YUAN}" step="0.01" value="${esc(draft.uiValues?.[key]??(value?value/100:''))}" required></label>`;
  if(key==='scheduled_date')return `<label>日期<input name="scheduled_date" type="date" value="${esc(value||'2026-11-02')}" required></label>`;
  return `<label>${fieldLabels[key]||'补充信息'}<select name="${esc(key)}" required><option value="">请选择</option>${(options[key]||[]).map(([id,label])=>`<option value="${id}" ${id===value?'selected':''}>${esc(label)}</option>`).join('')}</select></label>`;
 }).join('');}
@@ -16,7 +17,7 @@ export function draftWithInputs(draft,values){
   next.uiValues[key]=raw;
   if(key==='amount_minor'){
    const n=/^\d+(\.\d{1,2})?$/.test(raw)?Math.round(Number(raw)*100):null;
-   if(Number.isSafeInteger(n)&&n>0&&n<=2000000)next.fields[key]=n;else delete next.fields[key];
+   if(Number.isSafeInteger(n)&&n>0&&n<=MAX_AMOUNT_MINOR)next.fields[key]=n;else delete next.fields[key];
   }else if(options[key]?.some(([id])=>id===raw)||key==='scheduled_date'&&/^\d{4}-\d{2}-\d{2}$/.test(raw))next.fields[key]=raw;
   else delete next.fields[key];
  }
@@ -25,7 +26,7 @@ export function draftWithInputs(draft,values){
 export function readClarification(form){
  const fields={};for(const [key,value] of new FormData(form)){
   if(!fieldLabels[key])continue;
-  if(key==='amount_minor'){if(!/^\d+(\.\d{1,2})?$/.test(value))throw Error('请输入最多两位小数的金额');fields[key]=Math.round(Number(value)*100);if(fields[key]<=0||fields[key]>2000000)throw Error('金额不在本轮范围内');}
+  if(key==='amount_minor'){if(!/^\d+(\.\d{1,2})?$/.test(value))throw Error('请输入最多两位小数的金额');fields[key]=Math.round(Number(value)*100);if(fields[key]<=0||fields[key]>MAX_AMOUNT_MINOR)throw Error('金额不在本轮范围内');}
   else fields[key]=value;
  }return fields;
 }

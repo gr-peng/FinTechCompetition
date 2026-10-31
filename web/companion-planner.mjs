@@ -1,3 +1,4 @@
+import {MAX_AMOUNT_MINOR} from './limits.mjs';
 import {validateCompoundFields,compoundMissing} from './compound-fields.mjs';
 export {validateCompoundFields,compoundMissing,mergeCompoundFields,COMPOUND_ITEM_FIELDS} from './compound-fields.mjs';
 // A model may select a bounded local proposal. This module grants no authority,
@@ -44,7 +45,7 @@ function fieldValue(key,value){
  if(key==='start_date'){if(!validDate(value))fail();return value;}
  if(key==='recipient_name'){return text(value,80);}
  if(key==='recipient_reference'){if(!['new-card-6217','reported-card-8891'].includes(value))fail();return value;}
- if(key==='amount_minor'){if(!Number.isSafeInteger(value)||value<1||value>2000000)fail();return value;}
+ if(key==='amount_minor'){if(!Number.isSafeInteger(value)||value<1||value>MAX_AMOUNT_MINOR)fail();return value;}
  if(key==='birthday_date'){if(!validDate(value))fail();return value;}
  if(key==='budget_minor'){if(!Number.isSafeInteger(value)||value<1||value>2000000)fail();return value;}
  if(key==='partner_id'){if(value!=='partner-linxia')fail();return value;}

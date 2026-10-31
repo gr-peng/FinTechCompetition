@@ -1,3 +1,4 @@
+import {MAX_AMOUNT_MINOR} from './limits.mjs';
 import {budgetReceiptFacts} from './budget-result.mjs';
 import {ensureFinance,financialFacts,STORY_DATE} from './finance-state.mjs';
 
@@ -64,7 +65,7 @@ export function buildAgentFacts(state,positions=null,month=STORY_DATE.slice(0,7)
   income_month:{title:'收入来源',period:month,income_minor:current.incomeMinor,refund_minor:current.refundMinor,categories:incomeGroups},
   subscriptions:{title:'订阅扣费',period:month,paid_minor:subscriptionsPaid,next_cycle_minor:subscriptionRows.filter(s=>!s.cancelled).reduce((n,s)=>n+s.nextMinor,0),items:subscriptionRows,source:'本月扣费来自账本；价差与下次续费来自合成订阅合同快照，不包含使用频率推断'},
   large_expenses:{title:'大额支出',period:month,threshold_minor:100000,rows:rows.filter(r=>r.direction==='expense'&&r.amountMinor>=100000).sort((a,b)=>b.amountMinor-a.amountMinor||a.id.localeCompare(b.id)).map(r=>({id:r.id,title:r.title,date:r.date,category:r.category,amount_minor:r.amountMinor}))},
-  available_cash:{title:'可安排资金',cash_minor:current.cashMinor,reserve_minor:800000,available_minor:Math.max(0,current.cashMinor-800000),travel_plan_minor:Math.round((state.travelBudget??3000)*100),pending_transfer_minor:state.tasks.filter(t=>t.kind==='transfer'&&!['done','cancelled'].includes(t.status)).reduce((n,t)=>n+Math.round(t.amount*100),0),single_transfer_limit_minor:2000000,period:month,budget_total_minor:budgetTotal,budget_remaining_minor:budgetTotal===null?null:budgetTotal-current.netExpenseMinor},
+  available_cash:{title:'可安排资金',cash_minor:current.cashMinor,reserve_minor:800000,available_minor:Math.max(0,current.cashMinor-800000),travel_plan_minor:Math.round((state.travelBudget??3000)*100),pending_transfer_minor:state.tasks.filter(t=>t.kind==='transfer'&&!['done','cancelled'].includes(t.status)).reduce((n,t)=>n+Math.round(t.amount*100),0),single_transfer_limit_minor:MAX_AMOUNT_MINOR,period:month,budget_total_minor:budgetTotal,budget_remaining_minor:budgetTotal===null?null:budgetTotal-current.netExpenseMinor},
   holdings:{title:'持仓快照',available:false,reason:'尚未读取持仓，不把未知金额当作零'},
   recent_task:{title:'已完成的安排',entries:completedTaskFacts(state),reference_id:state.agentFocus||null}
  };

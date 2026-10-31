@@ -1,5 +1,6 @@
 // One local financial source. All amounts are integer fen; no bank connector.
 import {HISTORY_ROWS,HISTORY_VERSION} from './history-ledger.mjs';
+import {MAX_AMOUNT_MINOR} from './limits.mjs';
 export const STORY_DATE='2026-11-02';
 export const FINANCE_SCHEMA=2;
 const seed=[
@@ -42,7 +43,7 @@ function assertCompletedPolicyProof(state,t,{historical=false}={}){
  const entry=safety?.executions?.[executionId],result=entry?.result,grant=safety?.grants?.[entry?.grantId];
  if(!plain(safety)||safety.version!==1||!Number.isSafeInteger(safety.epoch)||safety.epoch<0||typeof safety.locked!=='boolean')invalid();
  if(!Number.isSafeInteger(t.revision)||t.revision<1||typeof t.id!=='string'||!validReceipt(t.receipt))invalid();
- if(!Number.isSafeInteger(snapshot.amountMinor)||snapshot.amountMinor<=0||snapshot.amountMinor>2000000||!Number.isFinite(t.amount)||Math.abs(t.amount*100-snapshot.amountMinor)>.000001)invalid();
+ if(!Number.isSafeInteger(snapshot.amountMinor)||snapshot.amountMinor<=0||snapshot.amountMinor>MAX_AMOUNT_MINOR||!Number.isFinite(t.amount)||Math.abs(t.amount*100-snapshot.amountMinor)>.000001)invalid();
  if(snapshot.currency!=='CNY'||!['salary_0826','living_1608'].includes(snapshot.scope.sourceAccount))invalid();
  if(t.approved!==t.revision||t.approvedParameters!==snapshot.parameters)invalid();
  if(!historical&&(!['executing','unknown'].includes(t.status)||t.granted!==true||t.applied===true))invalid();

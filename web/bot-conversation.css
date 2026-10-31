@@ -10,6 +10,13 @@
  padding:calc(10px + env(safe-area-inset-top)) var(--bot-side) 10px;
  background:transparent;border:0;box-shadow:none;
 }
+#app[data-route=assistant] .bot-topbar::after{
+ content:"";position:absolute;inset:0;z-index:-2;pointer-events:none;
+ background:rgba(228,236,255,.74);
+ backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);
+ mask-image:linear-gradient(to bottom,#000 70%,transparent 100%);
+ -webkit-mask-image:linear-gradient(to bottom,#000 70%,transparent 100%);
+}
 #app[data-route=assistant] .bot-topbar .bot-avatar::before{
  content:"";position:absolute;inset:0;border-radius:50%;z-index:-1;pointer-events:none;
  background:transparent;

@@ -1,9 +1,32 @@
 import {scenarios,createTask,transition} from './engine.mjs';
+import {MAX_AMOUNT_MINOR} from './limits.mjs';
 import {CONTACTS,SOURCES,parameterFingerprint,validateTaskParameters} from './task-parameters.mjs';
 import {questionResult,SUBSCRIPTIONS} from './agent-tools.mjs';
 import {rememberDraft,showDraft,finishDraft,leaveWorkspace} from './agent-workspace.mjs';
 
 const slotValues={payee_id:new Set(['mom','dad','unknown']),source_account:new Set(SOURCES.map(x=>x.id)),currency:new Set(['CNY']),subscription_id:new Set(SUBSCRIPTIONS.map(x=>x.id)),subscription_action:new Set(['cancel','keep','downgrade']),purpose:new Set(['family','travel','cash']),cadence:new Set(['once','monthly']),transaction_ref:new Set(['unrecognized_1299'])};
+const MONEY=/(?:[¥￥]\s*(\d[\d,]*(?:\.\d+)?)|(\d[\d,]*(?:\.\d+)?)\s*(万)?\s*(?:元|块|人民币)|(\d[\d,]*(?:\.\d+)?)\s*万)/g;
+function moneyMinors(text){
+ return [...String(text||'').matchAll(MONEY)].map(m=>{const raw=(m[1]||m[2]||m[4]).replaceAll(',','');return Math.round(Number(raw)*(m[3]||m[4]?10000:1)*100);});
+}
+function factNumbers(value,found=new Set(),key=''){
+ if(Number.isSafeInteger(value)&&key.endsWith('_minor'))found.add(value);
+ else if(value&&typeof value==='object')for(const [name,child] of Object.entries(value))factNumbers(child,found,name);
+ return found;
+}
+// Figures shown to the user must come from local facts, parameters or the user's own words.
+export function groundedReply(text,facts,userText,fallback){
+ const allowed=factNumbers(facts);
+ if(/[零〇一二三四五六七八九十百千万亿两点]+(?:元|块)/.test(text))return fallback;
+ return moneyMinors(text).every(amount=>allowed.has(amount))?text:fallback;
+}
+// Bind category and month as well as units; a matching number alone is not proof.
+export function factReply(data){
+ const period=data.period?`${data.period} `:'';
+ if(data.query==='dining_month')return `${period}餐饮支出 ¥${(data.amount_minor/100).toFixed(2)}。`;
+ if(data.query==='spending_month')return `${period}支出 ¥${(data.expense_minor/100).toFixed(2)}，退款 ¥${(data.refund_minor/100).toFixed(2)}，净支出 ¥${(data.net_expense_minor/100).toFixed(2)}。`;
+ return `已核对${period}${data.title}，请看下方数据。`;
+}
 export function mergeDraft(existing,result,originTurnId){
  const fields={...(existing?.fields||{}),...Object.fromEntries(Object.entries(result.fields||{}).filter(([,value])=>value!==null))};
  let missing=[...(result.missing||[])];
@@ -15,7 +38,7 @@ export function mergeDraft(existing,result,originTurnId){
 }
 function validateFields(fields){
  for(const [key,values] of Object.entries(slotValues))if(fields[key]!=null&&!values.has(fields[key]))throw Error('模型安排含未核实的参数，已停止创建任务');
- if(fields.amount_minor!=null&&(!Number.isSafeInteger(fields.amount_minor)||fields.amount_minor<=0||fields.amount_minor>2000000))throw Error('金额不符合本轮范围，请重新核对');
+ if(fields.amount_minor!=null&&(!Number.isSafeInteger(fields.amount_minor)||fields.amount_minor<=0||fields.amount_minor>MAX_AMOUNT_MINOR))throw Error('金额不符合本轮范围，请重新核对');
 }
 export function missingFields(result){
  const f=result.fields||{};
@@ -35,7 +58,10 @@ function applyResult(state,result,facts,{originTurnId,userText='',agentRunId=nul
  const fields=result.fields||{};validateFields(fields);
  const response={text:result.reply,card:null,taskId:null};
  if(result.status==='answer'){
-  if(result.scenario==='question')response.card={type:'fact',data:questionResult(facts,result.query,fields)};
+  if(result.scenario==='question'){
+   response.card={type:'fact',data:questionResult(facts,result.query,fields)};
+   response.text=factReply(response.card.data);
+  }
   return response;
  }
  if(result.status==='decline')return response;
@@ -88,5 +114,6 @@ function applyResult(state,result,facts,{originTurnId,userText='',agentRunId=nul
  validateTaskParameters(task);
  task.agentOrigin=true;task.agentRunId=agentRunId;task.originParameters=parameterFingerprint(task);task.sourceSnapshot=facts.snapshot_id;
  if(result.context_action==='new')leaveWorkspace(state);else finishDraft(state);
- state.agentFocus=task.id;state.agentWorkspaceVisible=true;response.taskId=task.id;return response;
+ state.agentFocus=task.id;state.agentWorkspaceVisible=true;response.taskId=task.id;
+ response.text=groundedReply(result.reply,{amount_minor:fields.amount_minor},userText,'请核对下方安排。');return response;
 }

@@ -4,6 +4,8 @@ import re
 from datetime import date
 from agent_errors import ContractError
 
+MAX_AMOUNT_MINOR=2000000000  # Keep in step with web/limits.mjs.
+
 QUERIES=('dining_month','spending_month','annual_trend','month_comparison','largest_category','income_month','subscriptions','large_expenses','available_cash','holdings','recent_task')
 COMPANION_ACTIONS={'birthday':'prepare_birthday','rent_reminder':'prepare_rent','subscription_reminder':'prepare_subscription','security_case':'show_security_case','compound':'prepare_compound','savings_coach':'prepare_savings'}
 SCENARIOS=('transfer','risk_transfer','subscription','budget_link','ambiguous','question','other','card_review',*COMPANION_ACTIONS,'plan_control')
@@ -119,9 +121,9 @@ def _validate_fields(fields,allowed):
     if allowed=={'items'}:return _compound_fields(fields)
     if not isinstance(fields,dict) or set(fields)-allowed:
         raise ContractError('invalid slots')
-    for name in ('amount_minor','budget_minor'):
+    for name,ceiling in (('amount_minor',MAX_AMOUNT_MINOR),('budget_minor',2000000)):
         amount=fields.get(name)
-        if amount is not None and (type(amount) is not int or not 1<=amount<=2000000):
+        if amount is not None and (type(amount) is not int or not 1<=amount<=ceiling):
             raise ContractError('invalid integer amount')
     for name in ('reduction_minor','daily_minor','target_minor'):
         amount=fields.get(name)
