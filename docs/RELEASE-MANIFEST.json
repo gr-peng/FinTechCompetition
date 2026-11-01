@@ -1,8 +1,8 @@
 {
   "version": "R17",
-  "base_commit": "875a9e9f56080e1dbb13af4cd9c1ae8bd66e2879",
+  "base_commit": "3a9d7e3b5837ec57a7579c2ba9ec42d118a5fd84",
   "branch": "26fincom_v2",
-  "rollback_branch": "rollback/26fincom_v2-before-repo-cleanup-20261101",
+  "rollback_branch": "rollback/26fincom_v2-before-readme-visual-restore-20261101",
   "verification": {
     "node_pass": 658,
     "python_pass": 209,
@@ -15,7 +15,7 @@
     ".gitattributes": "738072911215d5d6eb3ca499175b3d77fea7fb082786c0f613c8e3d8ff34bb0f",
     ".gitignore": "20a8ca50f31a90ef2e3910847cd10c6b4c6087f0e271a6af98b55bcb2a744158",
     ".runtime/.gitkeep": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-    "README.md": "8061bc496297facffd3927b33451edaa7cb8fedfab7866d2e52efc28ef881f5c",
+    "README.md": "c9162910b7be7d4a04c0493498de15b4007f2ab3c00969756b365c4ea33961af",
     "RUNNING.md": "4831818b6baa6edeb047edbee66d4a7db5c08d8cbffed665ed4df2f1291ca7c5",
     "backend/__init__.py": "7e6217d8d0d44969f741a56ec043184a75319cc9ad1b6595ee4a860cac915e13",
     "backend/agent_contract.py": "592906913692f4853376c680c7cc6d1da85b893f3e9fb0065d9cf7d49b7b0449",

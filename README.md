@@ -1,6 +1,8 @@
-# FinPilot
+<p align="center"><img src="web/assets/dot.png" width="88" alt=""></p>
+<h1 align="center">FinPilot</h1>
+<p align="center"><b>钱的事，我陪你。</b><br>安全智能的个人财务伙伴</p>
 
-安全智能的个人财务伙伴
+![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 
 [观看演示视频 · 4分44秒](https://github.com/JinchengGao-Infty/FinTechCompetition/blob/20a9d5f217d03e5e4a3f4e10144c6d33e9fe6165/video/FinPilot.mp4)
 
@@ -30,6 +32,15 @@ python -B server.py --port 65281
 
 短信、预订和资金操作由本地适配器执行，不连接真实银行或商家。声纹按钮展示验证动画，不是真实生物识别。提醒需要 App 和本地服务保持运行；离线时间可由展示页推进。
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/today.jpg" width="200" alt="今天"><br>今天：工资到账</td>
+    <td align="center"><img src="docs/screenshots/permission.png" width="200" alt="授权"><br>Bot：按任务授权</td>
+    <td align="center"><img src="docs/screenshots/finance.png" width="200" alt="财务"><br>财务：分类图表</td>
+    <td align="center"><img src="docs/screenshots/research.png" width="200" alt="研究"><br>投资：个股研究</td>
+  </tr>
+</table>
+
 ## 在线使用与开发
 
 启动和模型连接见 [运行指南](RUNNING.md)。支持 Micu 与 MiniMax 官方对话，模型名可编辑；MiniMax 语音独立连接。凭据只留在服务内存，由用户自行填写。
@@ -45,3 +56,4 @@ tools/            启动验证与发布检查工具
 docs/             演示流程和使用说明
 server.py         本地启动入口
 ```
+
