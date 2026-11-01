@@ -1,8 +1,8 @@
 import unittest,threading,time,tempfile,types,json
 from pathlib import Path
 from unittest.mock import patch
-import agent_runtime,agent_provider
-from agent_errors import ProviderError
+from backend import agent_runtime,agent_provider
+from backend.agent_errors import ProviderError
 PAYLOAD={'validation_scope':'finpilot-fifteen-v1','text':'本月餐饮支出','tool_catalog':['dining_month'],'run_history':[]}
 class StallTests(unittest.TestCase):
  def test_total_deadline_closes_a_body_read_and_never_marks_complete(self):

@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-import baseline_api
+from backend import baseline_api
 from baseline_backend.personal_positions import PersonalPositionStore, PositionConflict
 from baseline_backend.market_reference import MarketReference
 

@@ -6,7 +6,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-spec = importlib.util.spec_from_file_location("minimax_voice", Path(__file__).resolve().parents[1] / "minimax_voice.py")
+spec = importlib.util.spec_from_file_location("minimax_voice", Path(__file__).resolve().parents[1] / "backend" / "minimax_voice.py")
 voice = importlib.util.module_from_spec(spec); spec.loader.exec_module(voice)
 MOCK_KEY = "test-not-a-real-minimax-key"
 PCM = b"\x00\x00\x01\x00\xff\x7f\x00\x80"

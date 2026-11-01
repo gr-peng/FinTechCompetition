@@ -2,7 +2,7 @@
 import json
 import re
 from datetime import date
-from agent_errors import ContractError
+from backend.agent_errors import ContractError
 
 MAX_AMOUNT_MINOR=2000000000  # Keep in step with web/limits.mjs.
 
@@ -294,7 +294,7 @@ def _event_context(value):
     if value is None:return None
     if not isinstance(value,dict) or set(value)!={'event_id','type','fixture_id'} or not _local_id(value.get('event_id')) or not _local_id(value.get('fixture_id')) or not isinstance(value.get('type'),str) or value['type'] not in EVENT_TYPES:
         raise ContractError('invalid event context')
-    from demo_events import SOURCE_FIXTURES
+    from backend.demo_events import SOURCE_FIXTURES
     result=dict(value)
     if value['type'] in SOURCE_FIXTURES:
         fixture_id,source=SOURCE_FIXTURES[value['type']]

@@ -1,7 +1,7 @@
 import json
 import unittest
-from agent_contract import request_messages, validate_result, ContractError, SYSTEM_PROMPT
-from demo_events import DemoEventQueue, SOURCE_FIXTURES
+from backend.agent_contract import request_messages, validate_result, ContractError, SYSTEM_PROMPT
+from backend.demo_events import DemoEventQueue, SOURCE_FIXTURES
 
 
 def request(text='给陈宇转300元', event=None):

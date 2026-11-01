@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock
-from agent_provider import run_provider, ProviderError
+from backend.agent_provider import run_provider, ProviderError
 
 class UnavailableTests(unittest.TestCase):
     def test_503_is_not_auth_failure_and_never_retries_or_echoes_provider_body(self):

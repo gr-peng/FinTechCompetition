@@ -4,7 +4,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
-import baseline_api
+from backend import baseline_api
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('finpilot_startup_server',ROOT/'server.py')

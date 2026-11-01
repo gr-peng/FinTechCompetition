@@ -2,8 +2,8 @@
 import json
 import unittest
 from unittest.mock import Mock,patch
-import chat_profile as p
-import agent_provider
+from backend import chat_profile as p
+from backend import agent_provider
 
 HOST={'ALLOW_API':True,'AGENT_VALIDATION':True}
 class ProviderSwitchTests(unittest.TestCase):

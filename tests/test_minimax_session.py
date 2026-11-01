@@ -1,5 +1,6 @@
 import unittest,threading,json,http.client
-import server,minimax_session
+import server
+from backend import minimax_session
 
 class VoiceConfigTests(unittest.TestCase):
  def test_consent_is_required_and_llm_is_untouched(self):
@@ -57,7 +58,7 @@ class VoiceConfigHTTPTests(unittest.TestCase):
     yield {'type':'start','request_id':kw['request_id'],'model':'speech-2.8-turbo','voice':kw['voice_id']}
     yield {'type':'audio','request_id':kw['request_id'],'seq':0,'audio_base64':'AAA='}
     yield {'type':'end','request_id':kw['request_id'],'frames':1,'audio_bytes':2}
-  with patch('minimax_voice.MinimaxVoiceClient',Client),patch('agent_provider.run_provider',side_effect=AssertionError('Dialogue must not be invoked')):
+  with patch('backend.minimax_voice.MinimaxVoiceClient',Client),patch('backend.agent_provider.run_provider',side_effect=AssertionError('Dialogue must not be invoked')):
    for i,voice in enumerate(sorted(minimax_session.VOICES)):
     c=http.client.HTTPConnection('127.0.0.1',server.PORT,timeout=3)
     c.request('POST','/api/voice/minimax/stream',json.dumps({'request_id':'independent-'+str(i),'speak':'你好','voice_id':voice}),{'Origin':f'http://127.0.0.1:{server.PORT}','Cookie':self.cookie,'X-CSRF-Token':self.csrf,'Content-Type':'application/json'})
@@ -77,7 +78,7 @@ class VoiceConfigHTTPTests(unittest.TestCase):
 class VoiceStreamTests(unittest.TestCase):
  def setUp(self):
   import sys,types,io
-  self.sys=sys;self.old=sys.modules.get('minimax_voice');self.calls=[];self.session={}
+  self.sys=sys;self.old=sys.modules.get('backend.minimax_voice');self.calls=[];self.session={}
   minimax_session.configure(self.session,{'key':'test-voice-placeholder','consent':True})
   owner=self
   class Client:
@@ -88,7 +89,7 @@ class VoiceStreamTests(unittest.TestCase):
     if getattr(owner,'failure_case',False):raise RuntimeError('DO-NOT-EXPOSE-INTERNAL-CONTENT')
     yield {'type':'audio','request_id':kw['request_id'],'seq':0,'audio_base64':'AAA='}
     yield {'type':'end','request_id':kw['request_id']}
-  sys.modules['minimax_voice']=types.SimpleNamespace(MinimaxVoiceClient=Client,MinimaxVoiceError=RuntimeError)
+  sys.modules['backend.minimax_voice']=types.SimpleNamespace(MinimaxVoiceClient=Client,MinimaxVoiceError=RuntimeError)
   class Handler:
    def __init__(self):self.wfile=io.BytesIO();self.response=None
    def payload(self,limit):return {'request_id':'test-request','speak':'你好'}
@@ -99,8 +100,8 @@ class VoiceStreamTests(unittest.TestCase):
    def session(self):return owner.session
   self.handler=Handler()
  def tearDown(self):
-  if self.old is None:self.sys.modules.pop('minimax_voice',None)
-  else:self.sys.modules['minimax_voice']=self.old
+  if self.old is None:self.sys.modules.pop('backend.minimax_voice',None)
+  else:self.sys.modules['backend.minimax_voice']=self.old
  def run_stream(self):minimax_session.stream(self.handler,self.session,threading.Lock())
  def test_success_estimates_once_and_rejects_replay(self):
   self.run_stream();self.assertTrue(self.session['minimax_verified']);self.assertEqual(self.session['minimax_characters'],4)

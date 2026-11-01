@@ -4,11 +4,11 @@ import json
 import unittest
 from unittest.mock import Mock
 
-from agent_contract import (
+from backend.agent_contract import (
     COMPANION_ACTIONS, EVENT_TYPES, SECURITY_CASES, SYSTEM_PROMPT,
     ContractError, request_messages, validate_result,
 )
-from agent_provider import ProviderError, run_provider
+from backend.agent_provider import ProviderError, run_provider
 
 
 KEY='unit-test-fake-companion-credential'
@@ -266,7 +266,7 @@ class CompanionContractTests(unittest.TestCase):
             with self.subTest(patch=patch),self.assertRaises(ContractError):request_messages({**PAYLOAD,'run_companion':{'fields':{},'missing':[],**patch}})
 
     def test_local_event_context_is_bounded_and_contains_no_user_authorization(self):
-        from demo_events import SOURCE_FIXTURES
+        from backend.demo_events import SOURCE_FIXTURES
         for kind in EVENT_TYPES:
             event={'event_id':'event-local-1','type':kind,'fixture_id':SOURCE_FIXTURES[kind][0] if kind in SOURCE_FIXTURES else 'fixture-local-1'}
             with self.subTest(kind=kind):

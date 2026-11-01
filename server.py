@@ -9,17 +9,17 @@ import secrets
 import threading
 import time
 import importlib
-import agent_contract
-import agent_provider
-import agent_runtime
-import demo_events
-import minimax_session
-import chat_profile
+from backend import agent_contract
+from backend import agent_provider
+from backend import agent_runtime
+from backend import demo_events
+from backend import minimax_session
+from backend import chat_profile
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
-import baseline_api
-from agent_contract import request_messages, ContractError, SYSTEM_PROMPT, QUERIES
-from agent_provider import run_provider, ProviderError
+from backend import baseline_api
+from backend.agent_contract import request_messages, ContractError, SYSTEM_PROMPT, QUERIES
+from backend.agent_provider import run_provider, ProviderError
 
 ROOT = Path(__file__).resolve().parent
 WEB = ROOT / 'web'

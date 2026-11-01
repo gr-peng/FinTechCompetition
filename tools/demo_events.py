@@ -9,7 +9,7 @@ import uuid
 
 # Running this file directly otherwise shadows the root demo_events module.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from demo_events import EVENT_TYPES, DemoEventError, validate_scope, validate_request_id
+from backend.demo_events import EVENT_TYPES, DemoEventError, validate_scope, validate_request_id
 
 DEFAULT_PORT = 65321
 

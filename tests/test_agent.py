@@ -1,8 +1,8 @@
 import json
 import unittest
 from unittest.mock import Mock
-from agent_contract import validate_result, request_messages, ContractError, QUERIES
-from agent_provider import run_provider, ProviderError
+from backend.agent_contract import validate_result, request_messages, ContractError, QUERIES
+from backend.agent_provider import run_provider, ProviderError
 
 KEY='unit-test-fake-only-credential'
 PLAN={'status':'answer','scenario':'question','reply':'本月餐饮见下方数据卡。','query':'dining_month','fields':{},'missing':[],'mode':'none','task_id':None}

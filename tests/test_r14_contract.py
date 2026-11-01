@@ -1,5 +1,5 @@
 import unittest
-from agent_contract import validate_result,request_messages,ContractError,SYSTEM_PROMPT
+from backend.agent_contract import validate_result,request_messages,ContractError,SYSTEM_PROMPT
 
 class R14Contract(unittest.TestCase):
     def test_savings_initial_is_a_real_proposal_without_invented_amount(self):

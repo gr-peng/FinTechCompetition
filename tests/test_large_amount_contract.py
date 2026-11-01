@@ -1,5 +1,5 @@
 import unittest
-from agent_contract import validate_result, ContractError
+from backend.agent_contract import validate_result, ContractError
 
 class LargeAmountContract(unittest.TestCase):
     def test_large_risk_amount_is_not_a_schema_failure(self):

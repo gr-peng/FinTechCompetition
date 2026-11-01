@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from baseline_api import create_demo_db
+from backend.baseline_api import create_demo_db
 
 def main():
     parser = argparse.ArgumentParser()

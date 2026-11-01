@@ -4,9 +4,9 @@ import unittest
 import types
 from pathlib import Path
 from unittest.mock import Mock, patch
-import agent_provider
-import agent_runtime
-import chat_profile
+from backend import agent_provider
+from backend import agent_runtime
+from backend import chat_profile
 
 PAYLOAD={'validation_scope':'finpilot-fifteen-v1','text':'你好','tool_catalog':[],'run_history':[]}
 PLAN={'status':'answer','scenario':'other','reply':'你好。','query':None,'fields':{},'missing':[],'mode':'none','task_id':None}

@@ -66,16 +66,14 @@ def main():
             if name == 'web/baseline/manual-capture.js' and field == 'key' and value.isidentifier() and 'capture' in value.lower():
                 # This unchanged public createManualCapture default names a UI state field.
                 # Confirm its complete bytes against the published R5 base before excluding it.
-                prior = subprocess.run(['git','show','2ea8500e5b1013d1843312eda22826567f8159fa:'+name],
-                                       cwd=ROOT,capture_output=True)
-                if prior.returncode == 0 and prior.stdout == content:
+                if hashlib.sha256(content).hexdigest() == '099bf3146733fb640b248489cf4de7bc691da23ddd4a62b836387f7c2ed95aaa':
                     continue
             if any(part in value.lower() for part in ('placeholder','example','test','fake','demo','your_','your-','replace','not-a-real','fixtures')):
                 continue
             if '${' in value or not re.fullmatch(r'[A-Za-z0-9_+/.=-]{20,}', value):
                 continue
             risks.append({'path':name,'risk':'literal-credential-candidate'})
-    manifest = json.loads((ROOT / 'RELEASE-MANIFEST.json').read_text(encoding='utf-8'))
+    manifest = json.loads((ROOT / 'docs' / 'RELEASE-MANIFEST.json').read_text(encoding='utf-8'))
     for name, expected in manifest['source_files'].items():
         if hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != expected:
             risks.append({'path':name,'risk':'source-hash-mismatch'})

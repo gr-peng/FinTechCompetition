@@ -1,5 +1,5 @@
 import unittest
-from agent_contract import validate_result, ContractError, SYSTEM_PROMPT
+from backend.agent_contract import validate_result, ContractError, SYSTEM_PROMPT
 
 class WealthContractTests(unittest.TestCase):
     def proposal(self,fields=None):

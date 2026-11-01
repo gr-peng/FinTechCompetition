@@ -15,7 +15,7 @@ live_official_only = False  # Legacy name: unbound live requests remain forbidde
 
 def is_live_app(module):
     from pathlib import Path
-    return bool(module is not None and Path(getattr(module,'__file__','')).resolve()==Path(__file__).resolve().parent/'server.py'
+    return bool(module is not None and Path(getattr(module,'__file__','')).resolve()==Path(__file__).resolve().parents[1]/'server.py'
                 and getattr(getattr(module,'Handler',None),'server_version',None)=='FinPilotLocal')
 
 
@@ -117,11 +117,11 @@ def request_body(messages,model=MODEL):
 def install_existing_service(module):
     """Adopt only through the app's existing fixed module reload; preserve RAM."""
     global live_official_only
-    import agent_runtime
+    from backend import agent_runtime
     if not is_live_app(module):return False
     host=vars(module)
     from pathlib import Path
-    if host.get('ROOT')!=Path(__file__).resolve().parent:return False
+    if host.get('ROOT')!=Path(__file__).resolve().parents[1]:return False
     if (host.get('MODEL'),host.get('BASE')) not in {(MICU_MODEL,MICU_BASE),(MODEL,BASE)}:return False
     cls=host['Handler']
     if not host.get('ALLOW_API') or not host.get('AGENT_VALIDATION'):return False

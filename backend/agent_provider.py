@@ -8,10 +8,10 @@ import threading
 import socket
 import math
 from email.utils import parsedate_to_datetime
-import agent_runtime
-from agent_contract import validate_result,request_messages,ContractError
-from agent_errors import ProviderError
-import chat_profile
+from backend import agent_runtime
+from backend.agent_contract import validate_result,request_messages,ContractError
+from backend.agent_errors import ProviderError
+from backend import chat_profile
 importlib.reload(chat_profile)
 
 def retry_after_seconds(value, *, now=None):
@@ -131,8 +131,8 @@ agent_runtime.install_existing_service(sys.modules.get('__main__'))
 
 # Register fixed voice routes on normal module refresh; no credential migration.
 import importlib
-import minimax_session
-import minimax_voice
+from backend import minimax_session
+from backend import minimax_voice
 importlib.reload(minimax_voice)
 importlib.reload(minimax_session)
 minimax_session.install_existing_service(sys.modules.get('__main__'))

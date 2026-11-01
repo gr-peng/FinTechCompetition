@@ -8,7 +8,7 @@ from pathlib import Path
 import threading
 import unittest
 
-import demo_events
+from backend import demo_events
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('demo_events_test_server', ROOT / 'server.py')

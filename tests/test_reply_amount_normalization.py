@@ -1,5 +1,5 @@
 import unittest
-from agent_contract import validate_result, ContractError
+from backend.agent_contract import validate_result, ContractError
 
 def proposal(amount=30000):
     return dict(status='propose',scenario='security_case',reply='请核对这次转账。',

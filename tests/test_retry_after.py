@@ -5,9 +5,9 @@ import types
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
-import agent_provider
-import agent_runtime
-from agent_errors import ProviderError
+from backend import agent_provider
+from backend import agent_runtime
+from backend.agent_errors import ProviderError
 
 PAYLOAD={'validation_scope':'finpilot-fifteen-v1','text':'hi','tool_catalog':[], 'run_history':[]}
 

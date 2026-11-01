@@ -5,7 +5,7 @@ import json
 from baseline_backend.personal_positions import PersonalPositionStore, PositionConflict
 from baseline_backend.market_reference import MarketReference
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 _positions = None
 _market = None
 
