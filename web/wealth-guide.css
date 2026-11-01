@@ -8,3 +8,6 @@
 .wealth-allocation{display:flex;gap:3px;height:10px;border-radius:10px;overflow:hidden;margin:12px 0 20px}
 .wealth-choices{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 .wealth-choices button{min-height:44px}
+.wealth-holdings{padding:16px 20px}
+.wealth-holdings .plan-row{display:flex;justify-content:space-between;gap:12px}
+.wealth-holdings .plan-row small{display:block;margin-top:2px;font-size:13px;color:var(--slate-11,#60646c)}

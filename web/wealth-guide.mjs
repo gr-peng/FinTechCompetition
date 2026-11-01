@@ -77,7 +77,7 @@ export function postWealthReservation(state,op,permit,{now}={}){
 export function cancelWealthGuide(state,{now}={}){const g=state.wealthGuide;if(!g||g.stage==='done')return;revokeOperation(state,g.id+':subscribe',{reason:'user_cancel',now});g.stage='cancelled';g.revision++;}
 export function renderWealthSubscriptions(state,{esc:e}){
  const rows=state.wealthSubscriptions||[];if(!rows.length)return '';
- return `<section class="card companion-inline"><h3>理财持仓</h3>${rows.map(r=>`<div class="plan-row"><span>${e(r.name)}<small>${r.status==='completed'?'已买入 · '+e(String(r.units))+'份':'待确认，份额未到账'}</small></span><strong>${money(r.amountMinor)}</strong></div>`).join('')}</section>`;
+ return `<section class="card companion-inline wealth-holdings"><h3>理财持仓</h3>${rows.map(r=>`<div class="plan-row"><span>${e(r.name)}<small>${r.status==='completed'?'已买入 · '+e(String(r.units))+'份':'待确认，份额未到账'}</small></span><strong>${money(r.amountMinor)}</strong></div>`).join('')}</section>`;
 }
 export function renderWealthGuide(state,{esc:e}){
  const g=state.wealthGuide;if(!g||['done','cancelled'].includes(g.stage))return '';
