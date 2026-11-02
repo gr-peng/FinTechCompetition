@@ -60,7 +60,7 @@ export function offlineResult(request,{programEvent=false,formContinuation=false
  else if(context?.scenario==='savings_coach'&&/^(同意|可以|就这么办)$/.test(text))result=answer('请点击当前方案的确认按钮，核对预算后再安排储蓄。');
  else if(context?.scenario==='subscription_reminder'&&(formContinuation&&context.fields.subscription_action||/续一个月|不续|取消下次续费/.test(text))){
   const action=formContinuation?context.fields.subscription_action:(/不续|取消/.test(text)?'cancel':'keep');result=proposal('subscription_reminder',{subscription_action:action},action==='cancel'?'请核对取消下次续费，当前权益保留。':'只安排本期25元，请核对。',{context_action:'continue'});
- }else if(context?.scenario==='rent_reminder'&&text===normalize('这次房租从生活账户1608出，只付11月这一期。'))result=answer('已保留11月这一期，请在房租卡上核对并确认。');
+ }else if(context?.scenario==='rent_reminder'&&text===normalize('这次房租从生活账户1608出，只付11月这一期。'))result={...answer('已保留11月这一期，请在房租卡上核对并确认。'),context_action:'continue'};
  else if(context&&(context.plan_id||context.draft_id)&&/^(先不办了|取消|取消这次安排|顺风车先不约了)$/.test(text))result=proposal('plan_control',{plan_action:'cancel'},'已取消未完成的后续安排。',{mode:'update',task_id:context.plan_id||context.draft_id,context_action:'continue'});
  else if(/^(你好|hi|hello)$/i.test(text))result=answer('你好，小林。想先看看账单，还是安排一件事？');
  else result=answer('离线展示支持左侧示例和卡片里的修改、确认。自由提问请切换在线模式。');
