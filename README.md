@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/WebGL-2-990000?style=flat&logo=webgl&logoColor=white" alt="WebGL">
   <img src="https://img.shields.io/badge/Web_Audio-Streaming-227A52?style=flat" alt="Web Audio">
 </p>
+
 ![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 
 ## 演示视频
