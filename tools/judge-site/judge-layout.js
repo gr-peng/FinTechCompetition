@@ -1,0 +1,14 @@
+import {deviceScale,appURL} from './desktop-session.js';
+const steps=[...document.querySelectorAll('.sc-tour [data-route]')];
+const fit=()=>document.documentElement.style.setProperty('--device-scale',deviceScale(innerWidth,innerHeight).toFixed(3));
+addEventListener('resize',fit);fit();
+const mark=()=>{const route=location.hash||'#/today',top='/'+route.replace(/^#\//,'').split('/')[0];steps.forEach(b=>b.toggleAttribute('aria-current',false));steps.find(b=>b.dataset.route===top)?.setAttribute('aria-current','step');};
+addEventListener('hashchange',mark);mark();
+steps.forEach(b=>b.addEventListener('click',()=>{location.hash=b.dataset.route;}));
+document.querySelector('[data-birthday-clock]').addEventListener('click',()=>window.postMessage({type:'finpilot-advance-birthday'},location.origin));
+document.querySelector('[data-ride-clock]').addEventListener('click',()=>window.postMessage({type:'finpilot-advance-ride-reminder'},location.origin));
+document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>window.postMessage({type:'finpilot-offline-prefill',key:b.dataset.prompt},location.origin)));
+document.getElementById('reset').addEventListener('click',()=>window.postMessage({type:'finpilot-reset-session'},location.origin));
+const standalone=appURL(location.href);standalone.pathname=new URL('app.html',location.href).pathname;document.getElementById('open-app').href=standalone.href;
+document.getElementById('mode-label').textContent='离线展示';document.getElementById('mode-switch').hidden=true;
+const guide=document.getElementById('offline-guide');guide.hidden=false;guide.open=true;

@@ -4,9 +4,15 @@
 
 ![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 
-[观看演示视频 · 4分44秒](https://github.com/JinchengGao-Infty/FinTechCompetition/blob/20a9d5f217d03e5e4a3f4e10144c6d33e9fe6165/video/FinPilot.mp4)
+## 演示视频
+
+https://github.com/user-attachments/assets/5593dc92-e263-473b-8478-9294c8524bc7
 
 ## 打开离线演示
+
+[直接打开免配置体验](https://finpilot-judge-demo.pgr17398956318.chatgpt.site)。左侧选示例，填入右侧手机后发送，按卡片继续即可；无需模型 Key。
+
+也可在本地运行：
 
 需要 Python 3.12 或以上；主程序只用标准库，无需安装前端依赖。
 
@@ -43,7 +49,7 @@ python -B server.py --port 65281
 
 ## 在线使用与开发
 
-启动和模型连接见 [运行指南](RUNNING.md)。支持 Micu 与 MiniMax 官方对话，模型名可编辑；MiniMax 语音独立连接。凭据只留在服务内存，由用户自行填写。
+静态托管与导出见 [在线体验说明](docs/HOSTED-DEMO.md)。启动和模型连接见 [运行指南](RUNNING.md)。支持 Micu 与 MiniMax 官方对话，模型名可编辑；MiniMax 语音独立连接。凭据只留在服务内存，由用户自行填写。
 
 ```text
 backend/          对话协议、提供方连接、会话与后端适配

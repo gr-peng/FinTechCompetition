@@ -1,0 +1,3 @@
+const judgeURL=new URL(location.href);judgeURL.searchParams.set('offline','1');judgeURL.searchParams.set('app','1');judgeURL.searchParams.delete('online_session');let judgeId=sessionStorage.getItem('finpilot-judge-tab');if(!judgeId){judgeId='judge-'+crypto.randomUUID().replaceAll('-','').slice(0,20);sessionStorage.setItem('finpilot-judge-tab',judgeId);}judgeURL.searchParams.set('session',judgeId);history.replaceState(null,'',judgeURL);
+
+document.documentElement.dataset.offline='true';

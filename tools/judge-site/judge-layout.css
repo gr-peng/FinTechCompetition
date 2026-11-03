@@ -1,0 +1,28 @@
+/* Original showcase outside, original 390×844 App viewport inside the device. */
+.sc-device{overflow:hidden}
+.judge-phone-root{position:relative;transform:translateZ(0);width:390px;height:844px;border-radius:48px;overflow:hidden;clip-path:inset(0 round 48px);isolation:isolate;background:#f7f9ff}
+.judge-phone-viewport{position:relative;width:390px;height:844px;overflow:auto;overscroll-behavior:contain;scrollbar-width:auto;scrollbar-color:#b9bbc6 transparent}
+.judge-phone-viewport::-webkit-scrollbar{width:4px;height:4px}.judge-phone-viewport::-webkit-scrollbar-track{background:transparent}.judge-phone-viewport::-webkit-scrollbar-thumb{background:#b9bbc6;border-radius:8px}.judge-phone-viewport::-webkit-scrollbar-thumb:hover{background:#3e63dd}
+.judge-phone-viewport #app{min-height:844px;margin:0 auto}
+.judge-phone-root .ap-nav,.judge-phone-root .composer{width:350px;max-width:calc(100% - 40px);left:50%}
+.judge-phone-root .page-content{min-height:780px}
+.judge-phone-root .sheet,.judge-phone-root dialog{max-height:760px}
+.judge-phone-root #toast{max-width:350px}
+.sc-intro .sc-brand{color:#1c2024}.sc-intro .sc-lede{font-size:16px;line-height:1.75}
+.sc-intro .sc-mode{font-size:14px}.sc-intro .sc-reset{color:white}
+.sc-intro .sc-tour a,.sc-intro .sc-actions a{color:#3a5bc7}
+.sc-intro .sc-offline button{min-height:0}
+.sc-intro .sc-offline summary{display:list-item;min-height:0;padding:0;list-style:disclosure-closed}
+.sc-intro .sc-offline[open]>summary,.sc-intro .sc-offline details[open]>summary{list-style:disclosure-open}
+.sc-intro .sc-offline summary::after{display:none}
+.sc-device-wrap{align-self:center}
+/* Layout zoom rasterizes text at its final size; a transformed phone flattens it first. */
+@supports(zoom:1){.sc-device{transform:none;zoom:var(--device-scale)}}
+@media(min-width:821px){
+ html,body{height:100%;overflow:hidden}
+ .sc-stage{height:100dvh;min-height:0;align-items:center}
+ .sc-intro{max-height:calc(100dvh - 48px);overflow:auto;overscroll-behavior:contain;scrollbar-width:auto;padding-right:4px}
+ .sc-intro::-webkit-scrollbar{width:4px}.sc-intro::-webkit-scrollbar-thumb{background:#b9bbc6;border-radius:8px}.sc-intro::-webkit-scrollbar-thumb:hover{background:#3e63dd}
+}
+@media(max-width:820px){.sc-stage{padding:24px;gap:28px}.sc-intro{width:100%}.sc-device-wrap{margin-bottom:24px}}
+@supports(-moz-appearance:none){.judge-phone-viewport,.sc-intro{scrollbar-width:thin}}

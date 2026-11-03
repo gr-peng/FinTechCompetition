@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta http-equiv="Content-Security-Policy" content="connect-src 'self'; form-action 'none'"><script src="entry.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f3f5ff">
+<title>FinPilot 你的财务伙伴</title>
+<link rel="icon" href="assets/dot.png">
+
+<link rel="stylesheet" href="dot-pages.css"><link rel="stylesheet" href="baseline.css"><link rel="stylesheet" href="baseline-integration.css"><link rel="stylesheet" href="detail-polish.css"><link rel="stylesheet" href="material.css"><link rel="stylesheet" href="agent-details.css"><link rel="stylesheet" href="bot-conversation.css"><link rel="stylesheet" href="investment-refinement.css"><link rel="stylesheet" href="bank-cards.css"><link rel="stylesheet" href="companion-ui.css"><link rel="stylesheet" href="savings-coach.css"><link rel="stylesheet" href="wealth-guide.css"><link rel="stylesheet" href="typography.css"><link rel="stylesheet" href="showcase.css"><link rel="stylesheet" href="judge-layout.css"></head>
+<body>
+<div class="sc-backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+<main class="sc-stage">
+  <section class="sc-intro" tabindex="0">
+    <div class="sc-brand"><img src="assets/dot.png" alt=""><span>FinPilot</span></div>
+    <h1>钱的事，我陪你。</h1>
+    <p class="sc-lede">一个以持续委托为核心的个人财务伙伴。你说一句话，它整理成任务；每一步动钱之前，都先征得你的同意。</p>
+
+    <ul class="sc-points">
+      <li>
+        <span class="sc-icon"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <div><b>先授权，再动钱</b><p>每个任务单独授权，确认前可随时修改；改了金额，旧的确认立即失效。</p></div>
+      </li>
+      <li>
+        <span class="sc-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 10h16M9 10v9"/></svg></span>
+        <div><b>一本账，处处一致</b><p>转账回执、账本流水和分类图表同源，理财本金划转不计入消费。</p></div>
+      </li>
+      <li>
+        <span class="sc-icon"><svg viewBox="0 0 24 24"><path d="M4 19l5-6 4 3 7-9"/><path d="M15 7h5v5"/></svg></span>
+        <div><b>有出处的投资研究</b><p>十只 A 股的历史行情、K 线与研报原文，每条数据标注时点和来源。</p></div>
+      </li>
+    </ul>
+
+    <div class="sc-mode"><span id="mode-label">离线展示</span><a hidden id="mode-switch" href="?offline=1">试用离线展示</a></div>
+    <details id="offline-guide" class="sc-offline" open>
+      <summary>五个场景的输入示例</summary>
+      <p>预置理解，不调用对话或语音 API。填入后发送，每个操作仍需核对。</p>
+      <ol>
+        <li><b>收款风险</b><button data-prompt="recipient">新收款人 300 元</button><button data-prompt="seller">闲鱼卖家 2000 元</button></li>
+        <li><b>外部消息</b><p>点 Bot 输入框左侧＋，选择收到账单邮件。</p></li>
+        <li><b>主动提醒</b><p>点＋选择房东邮件或会员到期；在卡片上选择续费或取消。</p></li>
+        <li><b>生活安排</b><button data-prompt="ride">妈妈短信和顺风车</button><button data-prompt="birthday">准备女朋友生日</button><details><summary>演示时钟</summary><button data-ride-clock>推进到出发提醒</button><button data-birthday-clock>推进到生日13:14</button></details></li>
+        <li><b>模糊理财意图</b><button data-prompt="savings">手里有点钱，想理一理</button></li>
+      </ol>
+      <p>每个场景前点 Bot 右上角重置。密码验证卡会显示演示密码，请手动输入。</p>
+    </details>
+    <nav class="sc-tour" aria-label="演示路线">
+      <h2>演示路线</h2>
+      <ol>
+        <li><button type="button" data-route="/today"><em>1</em><span><b>今天</b><small>工资到账，看看怎么安排</small></span></button></li>
+        <li><button type="button" data-route="/bot"><em>2</em><span><b>Bot</b><small>交给它一件事，授权后再执行</small></span></button></li>
+        <li><button type="button" data-route="/finance"><em>3</em><span><b>财务</b><small>账本、分类图表与预算</small></span></button></li>
+        <li><button type="button" data-route="/investment"><em>4</em><span><b>投资</b><small>持仓、银行理财与个股研究</small></span></button></li>
+        <li><button type="button" data-route="/me"><em>5</em><span><b>我的</b><small>权限、提醒与模型连接</small></span></button></li>
+      </ol>
+    </nav>
+
+    <div class="sc-actions">
+      <button type="button" class="sc-reset" id="reset">重置演示</button>
+      <a id="open-app" href="./?app=1" target="_blank" rel="noopener">单独打开 App ↗</a>
+    </div>
+    <p class="sc-note">演示数据均为合成，不连接真实银行；默认不调用外部模型。</p>
+  </section>
+
+  <section class="sc-device-wrap" aria-label="FinPilot App 预览">
+    <div class="sc-device">
+      <div class="sc-island" aria-hidden="true"></div>
+      <div class="judge-phone-root"><div id="judge-phone-viewport" class="judge-phone-viewport" tabindex="-1"><div id="app"></div></div><div id="overlay"></div><div id="toast" role="status"></div></div>
+    </div>
+  </section>
+</main>
+<script type="module" src="app.js"></script><script type="module" src="material/app-material.js?v=judge-phone-v4"></script><script type="module" src="judge-layout.js"></script>
+</body>
+</html>

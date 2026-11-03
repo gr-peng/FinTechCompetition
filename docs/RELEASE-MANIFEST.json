@@ -1,21 +1,27 @@
 {
   "version": "R17",
-  "base_commit": "3158c5e10259bfff8c5699cffeedbcb2553bdf46",
+  "base_commit": "29319c2b1efa0d5e640108e567661f6917b3f07b",
   "branch": "26fincom_v2",
-  "rollback_branch": "rollback/26fincom_v2-before-readme-brand-20261103",
+  "rollback_branch": "rollback/26fincom_v2-before-hosted-demo-20261103",
   "verification": {
     "node_pass": 658,
     "python_pass": 209,
     "fresh_startup": "passed",
     "static_routes": 18,
     "module_references": 212,
-    "external_api_called": false
+    "external_api_called": false,
+    "hosted_static_export": {
+      "files": 270,
+      "content_comparison": "matches deployed static assets",
+      "targeted_node_pass": 87,
+      "live_site_version": 5
+    }
   },
   "source_files": {
     ".gitattributes": "738072911215d5d6eb3ca499175b3d77fea7fb082786c0f613c8e3d8ff34bb0f",
     ".gitignore": "20a8ca50f31a90ef2e3910847cd10c6b4c6087f0e271a6af98b55bcb2a744158",
     ".runtime/.gitkeep": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-    "README.md": "f4677d7c811f75ec2c3dadf75783702eaf0f3c0f1481531b44ed9109aca8990a",
+    "README.md": "589e252f55f50732437e22479a514b9fe60b9238a1c94ecf7cabe9ed2d3ef4af",
     "RUNNING.md": "4831818b6baa6edeb047edbee66d4a7db5c08d8cbffed665ed4df2f1291ca7c5",
     "backend/__init__.py": "7e6217d8d0d44969f741a56ec043184a75319cc9ad1b6595ee4a860cac915e13",
     "backend/agent_contract.py": "592906913692f4853376c680c7cc6d1da85b893f3e9fb0065d9cf7d49b7b0449",
@@ -425,6 +431,26 @@
     "docs/assets/modules.svg": "7b9ee9bb42e16833631d119c3106afa902f4ef94efc3636fd0e41e80a9371490",
     "docs/assets/sqlite.svg": "d6d31969edd4ad0fd38bae9c1b9c715b610e5b52a1507107fefe2515638a29a5",
     "docs/assets/webgl.svg": "11e9b2f2fb983dbafc2639e1607df8e0aade00a4b5a9fe03f13988865aa71503",
-    "docs/assets/audio.svg": "291dd1642d8d2440998ac513f2141e35b476459b712f0b8fd7c484278a6e59ab"
+    "docs/assets/audio.svg": "291dd1642d8d2440998ac513f2141e35b476459b712f0b8fd7c484278a6e59ab",
+    "tools/build_judge_site.py": "5a303fd956da7efe65e700af3940e6670309beeac9573e7cadae3a3ff70bfbf7",
+    "docs/HOSTED-DEMO.md": "9b7b17c51958a4866e7394385ea140666aeb39cac5c610de8fade3b47f3dac48",
+    "demo/judge-site-fixtures.json": "05463ef804e8f872693485c5da8ae7e69ce3bdfb9e948eae03f7159379e7f380",
+    "tools/judge-site/app.html": "d99a2b5fdcabb1c191c887e353872044b43c0674db86ea2b54b03f1566a6000d",
+    "tools/judge-site/app.js": "417881bfc4b13a252f0c16d021f17ce61cc175160dd246159a0c60a5f67137b3",
+    "tools/judge-site/baseline-bridge.js": "7445769ee339799200449e227e8e95fc70efd6d0f90ae208640de3e82290702c",
+    "tools/judge-site/bot-viewport.js": "191f3d77476d4bbef9b6d827f3d1c2cefd89d6d2b73cf3cc720c89254bf737c1",
+    "tools/judge-site/entry.js": "6fc2de63bc2eac0880ca492175aa8312b4941c577460beb0dadbc63a90c02697",
+    "tools/judge-site/index.html": "769cf85b5bae333a382f7a5cf4156abec75801a20527544ac0f316d7b7b3a8bd",
+    "tools/judge-site/judge-entry.js": "77273358368d66436e54b41dd4343981957b9f305ee158742eac43852f85b839",
+    "tools/judge-site/judge-layout.css": "13acadb640ccc136f08ff6a27c4d6083e5371f4148caddd0d8764c3edbe3d035",
+    "tools/judge-site/judge-layout.js": "56b50b386aed7be48ca8a82d3a78ad7814234159b2d12529514d317a1cb4fa7d",
+    "tools/judge-site/judge-static.js": "2cbabfd3302c9630976af9aab864d426854b26ca6f47f889b835ae6c6afaf413",
+    "tools/judge-site/judge-transport.js": "6b8c75e31f175c46d6afc44845450010f3a755e77f6ef63c6c2fa39b2c99a5bd",
+    "tools/judge-site/judge-viewport.js": "38e6f84ec1c9bd18244e863b4a5d7ceda32bcc986a06ec06ace3421c14fecd29",
+    "tools/judge-site/package.json": "d218e29ec01186542b0d85bdc6691d12514e4cdd0ba3b9cd81f253250c8d1e34",
+    "tools/judge-site/showcase.html": "769cf85b5bae333a382f7a5cf4156abec75801a20527544ac0f316d7b7b3a8bd",
+    "tools/judge-site/showcase.js": "9486d0ebbd6f5bbb078a2cd0b2f2e735417fccc9da84eb54e444b4e02a4f991b",
+    "tools/judge-site/material/metal-card.js": "b2ade430d515799e20302abaf46951be1fcb1e87f0b91b3f93c6b1fb367634f5",
+    "tools/judge-site/material/renderer.js": "fe3099547e0e6041879e8053004da1da920f44d5081776486c811e4d351da301"
   }
 }
