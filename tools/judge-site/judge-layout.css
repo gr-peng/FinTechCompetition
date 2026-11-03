@@ -26,3 +26,8 @@
 }
 @media(max-width:820px){.sc-stage{padding:24px;gap:28px}.sc-intro{width:100%}.sc-device-wrap{margin-bottom:24px}}
 @supports(-moz-appearance:none){.judge-phone-viewport,.sc-intro{scrollbar-width:thin}}
+
+/* Extend the same header material into the safe inset; content keeps its original 34px padding. */
+.judge-phone-root{mask-image:linear-gradient(#fff,#fff);-webkit-mask-image:linear-gradient(#fff,#fff)}
+.judge-phone-root #app{--judge-app-top:34px;padding-top:var(--judge-app-top)}
+.judge-phone-root #app[data-route=assistant] .bot-topbar::after{top:calc(16px - var(--judge-app-top));border-top-left-radius:48px;border-top-right-radius:48px}
