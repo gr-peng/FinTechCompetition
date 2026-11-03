@@ -1,6 +1,10 @@
 <table><tr><td width="23%" align="center"><img src="web/assets/dot.png" width="180" alt="FinPilot 伙伴"></td><td width="77%"><img src="docs/assets/brand-title.svg" width="100%" alt="FinPilot：钱的事，我陪你。安全智能的个人财务伙伴"></td></tr></table>
 
-<p align="center"><img src="docs/assets/python.svg" height="20" alt="Python 3.12+"> <img src="docs/assets/modules.svg" height="20" alt="ES Modules"> <img src="docs/assets/sqlite.svg" height="20" alt="SQLite"> <img src="docs/assets/webgl.svg" height="20" alt="WebGL 2"> <img src="docs/assets/audio.svg" height="20" alt="Web Audio"></p>
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat&logo=python&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES_Modules-F7DF1E?style=flat&logo=javascript&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-Local_Data-003B57?style=flat&logo=sqlite&logoColor=white)
+![WebGL](https://img.shields.io/badge/WebGL-2-990000?style=flat&logo=webgl&logoColor=white)
+![Web Audio](https://img.shields.io/badge/Web_Audio-Streaming-227A52?style=flat)
 
 ![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 
@@ -62,5 +66,6 @@ tools/            启动验证与发布检查工具
 docs/             演示流程和使用说明
 server.py         本地启动入口
 ```
+
 
 

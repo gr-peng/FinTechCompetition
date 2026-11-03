@@ -1,8 +1,8 @@
 {
   "version": "R17",
-  "base_commit": "550c15158ecf26fcb34ae5598f37785f44bb8172",
+  "base_commit": "afd50c0a2f691831b4fac1af3167b2a3f79f52fd",
   "branch": "26fincom_v2",
-  "rollback_branch": "rollback/26fincom_v2-before-badges-phone-20261103",
+  "rollback_branch": "rollback/26fincom_v2-before-scrollbar-shields-20261103",
   "verification": {
     "node_pass": 658,
     "python_pass": 209,
@@ -21,7 +21,7 @@
     ".gitattributes": "738072911215d5d6eb3ca499175b3d77fea7fb082786c0f613c8e3d8ff34bb0f",
     ".gitignore": "20a8ca50f31a90ef2e3910847cd10c6b4c6087f0e271a6af98b55bcb2a744158",
     ".runtime/.gitkeep": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-    "README.md": "67712ccc332cb257288fef3d0d9269f69b80adf35f8b609aa22d440af0e0eeaa",
+    "README.md": "e4ebac9bb1d78162b9c7b31ae851385f3fd6620dd1d2da949bc24d553bf856fa",
     "RUNNING.md": "4831818b6baa6edeb047edbee66d4a7db5c08d8cbffed665ed4df2f1291ca7c5",
     "backend/__init__.py": "7e6217d8d0d44969f741a56ec043184a75319cc9ad1b6595ee4a860cac915e13",
     "backend/agent_contract.py": "592906913692f4853376c680c7cc6d1da85b893f3e9fb0065d9cf7d49b7b0449",
@@ -442,7 +442,7 @@
     "tools/judge-site/entry.js": "6fc2de63bc2eac0880ca492175aa8312b4941c577460beb0dadbc63a90c02697",
     "tools/judge-site/index.html": "769cf85b5bae333a382f7a5cf4156abec75801a20527544ac0f316d7b7b3a8bd",
     "tools/judge-site/judge-entry.js": "77273358368d66436e54b41dd4343981957b9f305ee158742eac43852f85b839",
-    "tools/judge-site/judge-layout.css": "7d358fb12eb17faf7386916d907bc1d684a3106fd60f1b73024810b11be2d850",
+    "tools/judge-site/judge-layout.css": "07761fe3b1aab0a43b9e2520fb065cba8ea5a0fdeb8f834a1819dcac7929cd6b",
     "tools/judge-site/judge-layout.js": "56b50b386aed7be48ca8a82d3a78ad7814234159b2d12529514d317a1cb4fa7d",
     "tools/judge-site/judge-static.js": "2cbabfd3302c9630976af9aab864d426854b26ca6f47f889b835ae6c6afaf413",
     "tools/judge-site/judge-transport.js": "6b8c75e31f175c46d6afc44845450010f3a755e77f6ef63c6c2fa39b2c99a5bd",

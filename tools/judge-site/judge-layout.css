@@ -1,7 +1,7 @@
 /* Original showcase outside, original 390×844 App viewport inside the device. */
 .sc-device{overflow:hidden}
 .judge-phone-root{position:relative;transform:translateZ(0);width:390px;height:844px;border-radius:48px;overflow:hidden;clip-path:inset(0 round 48px);isolation:isolate;background:#f7f9ff}
-.judge-phone-viewport{position:relative;width:390px;height:844px;overflow:auto;overscroll-behavior:contain;scrollbar-width:auto;scrollbar-color:#b9bbc6 transparent}
+.judge-phone-viewport{position:relative;width:390px;height:844px;overflow:auto;overscroll-behavior:contain;scrollbar-width:auto;scrollbar-color:auto}
 .judge-phone-viewport::-webkit-scrollbar{width:4px;height:4px}.judge-phone-viewport::-webkit-scrollbar-track{background:transparent}.judge-phone-viewport::-webkit-scrollbar-thumb{background:#b9bbc6;border-radius:8px}.judge-phone-viewport::-webkit-scrollbar-thumb:hover{background:#3e63dd}
 .judge-phone-viewport #app{min-height:844px;margin:0 auto}
 .judge-phone-root .ap-nav,.judge-phone-root .composer{width:350px;max-width:calc(100% - 40px);left:50%}
@@ -31,3 +31,11 @@
 .judge-phone-root{mask-image:linear-gradient(#fff,#fff);-webkit-mask-image:linear-gradient(#fff,#fff)}
 .judge-phone-root #app{--judge-app-top:34px;padding-top:var(--judge-app-top)}
 .judge-phone-root #app[data-route=assistant] .bot-topbar::after{top:calc(16px - var(--judge-app-top));border-top-left-radius:48px;border-top-right-radius:48px}
+
+/* Match Bot: Chromium uses a 4px native thumb; Firefox uses its native thin policy. */
+html,.sc-intro,.judge-phone-viewport{scrollbar-width:auto;scrollbar-color:auto}
+.sc-intro::-webkit-scrollbar,.judge-phone-viewport::-webkit-scrollbar{width:4px;height:4px}
+.sc-intro::-webkit-scrollbar-track,.judge-phone-viewport::-webkit-scrollbar-track{background:transparent}
+.sc-intro::-webkit-scrollbar-thumb,.judge-phone-viewport::-webkit-scrollbar-thumb{background:#b9bbc6;border-radius:8px}
+.sc-intro::-webkit-scrollbar-thumb:hover,.judge-phone-viewport::-webkit-scrollbar-thumb:hover{background:#3e63dd}
+@supports(-moz-appearance:none){html,.sc-intro,.judge-phone-viewport{scrollbar-width:thin;scrollbar-color:#b9bbc6 transparent}.sc-intro:hover,.judge-phone-viewport:hover{scrollbar-color:#3e63dd transparent}}
