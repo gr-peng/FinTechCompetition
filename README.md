@@ -1,6 +1,6 @@
-<p align="center"><img src="web/assets/dot.png" width="88" alt=""></p>
-<h1 align="center">FinPilot</h1>
-<p align="center"><b>钱的事，我陪你。</b><br>安全智能的个人财务伙伴</p>
+<table><tr><td width="23%" align="center"><img src="web/assets/dot.png" width="180" alt="FinPilot 伙伴"></td><td width="77%"><img src="docs/assets/brand-title.svg" width="100%" alt="FinPilot：钱的事，我陪你。安全智能的个人财务伙伴"></td></tr></table>
+
+<p align="center"><img src="docs/assets/python.svg" height="28" alt="Python 3.12+"> <img src="docs/assets/modules.svg" height="28" alt="ES Modules"> <img src="docs/assets/sqlite.svg" height="28" alt="SQLite"> <img src="docs/assets/webgl.svg" height="28" alt="WebGL 2"> <img src="docs/assets/audio.svg" height="28" alt="Web Audio"></p>
 
 ![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 

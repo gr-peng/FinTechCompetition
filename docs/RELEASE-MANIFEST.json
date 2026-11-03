@@ -1,8 +1,8 @@
 {
   "version": "R17",
-  "base_commit": "3a9d7e3b5837ec57a7579c2ba9ec42d118a5fd84",
+  "base_commit": "3158c5e10259bfff8c5699cffeedbcb2553bdf46",
   "branch": "26fincom_v2",
-  "rollback_branch": "rollback/26fincom_v2-before-readme-visual-restore-20261101",
+  "rollback_branch": "rollback/26fincom_v2-before-readme-brand-20261103",
   "verification": {
     "node_pass": 658,
     "python_pass": 209,
@@ -15,7 +15,7 @@
     ".gitattributes": "738072911215d5d6eb3ca499175b3d77fea7fb082786c0f613c8e3d8ff34bb0f",
     ".gitignore": "20a8ca50f31a90ef2e3910847cd10c6b4c6087f0e271a6af98b55bcb2a744158",
     ".runtime/.gitkeep": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-    "README.md": "c9162910b7be7d4a04c0493498de15b4007f2ab3c00969756b365c4ea33961af",
+    "README.md": "f4677d7c811f75ec2c3dadf75783702eaf0f3c0f1481531b44ed9109aca8990a",
     "RUNNING.md": "4831818b6baa6edeb047edbee66d4a7db5c08d8cbffed665ed4df2f1291ca7c5",
     "backend/__init__.py": "7e6217d8d0d44969f741a56ec043184a75319cc9ad1b6595ee4a860cac915e13",
     "backend/agent_contract.py": "592906913692f4853376c680c7cc6d1da85b893f3e9fb0065d9cf7d49b7b0449",
@@ -419,6 +419,12 @@
     "web/view-navigation.mjs": "01507f2d0cd0e5885d9afdb6f5d820cf29fb570d0e208aab4fa4867480f67169",
     "web/voice-demo.mjs": "83dce7b45d1eb7f00a4709363fa1ac9d741fe58c44bd1dc0bc8498827ba22952",
     "web/wealth-guide.css": "3d2b0a011922d0019590d18249bb5a0dbfe1fc7d53e260b299bdb3b0b1ec6b9a",
-    "web/wealth-guide.mjs": "b75058b57f240eaf5e2e88d56f8b35881a8a5ddbb3a7684f9f73338525242f32"
+    "web/wealth-guide.mjs": "b75058b57f240eaf5e2e88d56f8b35881a8a5ddbb3a7684f9f73338525242f32",
+    "docs/assets/brand-title.svg": "e5b687d300660be1aba3d2e19169646d7edd91cec45d9339a23f2dc738e08b7b",
+    "docs/assets/python.svg": "a8d59a202d57ee255e81536878297757a5edf623d8f039537d740111b032b7ad",
+    "docs/assets/modules.svg": "7b9ee9bb42e16833631d119c3106afa902f4ef94efc3636fd0e41e80a9371490",
+    "docs/assets/sqlite.svg": "d6d31969edd4ad0fd38bae9c1b9c715b610e5b52a1507107fefe2515638a29a5",
+    "docs/assets/webgl.svg": "11e9b2f2fb983dbafc2639e1607df8e0aade00a4b5a9fe03f13988865aa71503",
+    "docs/assets/audio.svg": "291dd1642d8d2440998ac513f2141e35b476459b712f0b8fd7c484278a6e59ab"
   }
 }
