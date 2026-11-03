@@ -1,11 +1,12 @@
 <table><tr><td width="23%" align="center"><img src="web/assets/dot.png" width="180" alt="FinPilot 伙伴"></td><td width="77%"><img src="docs/assets/brand-title.svg" width="100%" alt="FinPilot：钱的事，我陪你。安全智能的个人财务伙伴"></td></tr></table>
 
-![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat&logo=python&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES_Modules-F7DF1E?style=flat&logo=javascript&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Local_Data-003B57?style=flat&logo=sqlite&logoColor=white)
-![WebGL](https://img.shields.io/badge/WebGL-2-990000?style=flat&logo=webgl&logoColor=white)
-![Web Audio](https://img.shields.io/badge/Web_Audio-Streaming-227A52?style=flat)
-
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/JavaScript-ES_Modules-F7DF1E?style=flat&logo=javascript&logoColor=white" alt="JavaScript">
+  <img src="https://img.shields.io/badge/SQLite-Local_Data-003B57?style=flat&logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/WebGL-2-990000?style=flat&logo=webgl&logoColor=white" alt="WebGL">
+  <img src="https://img.shields.io/badge/Web_Audio-Streaming-227A52?style=flat" alt="Web Audio">
+</p>
 ![FinPilot 桌面演示页](docs/screenshots/showcase.jpg)
 
 ## 演示视频
@@ -30,17 +31,14 @@ python -B server.py --port 65281
 
 照着 [5个场景和15个常用问题](docs/DEMO-PROMPTS.zh-CN.md) 体验。离线支持预置示例和卡片操作；自由问答需切换在线模式并连接模型。
 
-## 伙伴能做什么
+## FinPilot能做什么
 
-- **先守住钱，再推进任务。** 结合收款记录、金额和风险证据分级，先确认、再验证；三次密码错误冻结十分钟，邮件里的指令不能变成付款授权。
-- **有事主动提醒。** 房租邮件、会员到期和出发前一小时提醒进入对话，确认范围后才继续，未到时间不会报成已执行。
-- **一句话安排多件事。** 给妈妈发短信、预约顺风车并设置提醒；离线还可体验餐厅、蛋糕、定金和生日定时转账，逐步确认、随时取消。
-- **把模糊想法问清楚。** 从“手里有点钱，想理一理”开始，选择攒钱或收益方向，结合账户和账单安排预算、储蓄罐或理财方案。
-- **文字与语音接续。** 单麦克风输入、独立语音连接、流式播报和数字读法；不连接语音也能完成文字与卡片操作。
+- **安全换你安心** 自动识别交易和外部信息中的风险，根据风险程度选择确认、身份验证或暂停操作，让每一步资金往来都有保障。
+- **有事主动提醒。** 关注账单、订阅和日程等重要事项，在合适的时间主动提醒，并在涉及操作时征得用户同意。
+- **一句话安排多件事。** 理解生活中的复杂需求，协调多个步骤和服务，逐步完成安排，让用户随时了解进度并决定是否继续。
+- **把模糊想法问清楚。** 通过简单对话了解用户的目标和偏好，结合财务情况，提供更贴合需求的预算、储蓄与理财建议。
+- **文字与语音接续。** 支持文字和语音交互，用自然的对话方式提供回答、图表和操作卡片；即使没有连接语音服务，也能正常使用文字功能。
 
-财务页汇总账本、图表、预算、储蓄罐和卡片；投资页展示持仓、理财及研究资料。结果按执行记录生成，完成后的过程可以展开查看。
-
-短信、预订和资金操作由本地适配器执行，不连接真实银行或商家。声纹按钮展示验证动画，不是真实生物识别。提醒需要 App 和本地服务保持运行；离线时间可由展示页推进。
 
 <table>
   <tr>
